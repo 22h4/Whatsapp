@@ -72,6 +72,64 @@ interface WhatsAppDBSchema extends DBSchema {
       metadata?: Record<string, any>;
     };
   };
+  templates: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      content: string;
+      category: 'marketing' | 'support' | 'notification' | 'custom';
+      variables: string[];
+      status: 'draft' | 'pending' | 'approved' | 'rejected';
+      createdAt: string;
+      updatedAt: string;
+      createdBy?: string;
+      approvedBy?: string;
+      language: string;
+      description?: string;
+      tags?: string[];
+    };
+  };
+  campaigns: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      description?: string;
+      templateId: string;
+      status: 'draft' | 'scheduled' | 'running' | 'completed' | 'paused' | 'failed';
+      schedule: {
+        startDate: string;
+        endDate?: string;
+        timezone: string;
+        frequency: 'once' | 'daily' | 'weekly' | 'monthly';
+        daysOfWeek?: number[];
+        dayOfMonth?: number;
+        timeOfDay: string;
+      };
+      targetAudience: {
+        type: 'all' | 'group' | 'filtered';
+        groupId?: string;
+        filters?: {
+          field: string;
+          operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan';
+          value: string;
+        }[];
+      };
+      metrics: {
+        totalContacts: number;
+        sent: number;
+        delivered: number;
+        failed: number;
+        opened: number;
+        replied: number;
+        lastUpdated: string;
+      };
+      createdAt: string;
+      updatedAt: string;
+      createdBy?: string;
+    };
+  };
 }
 
 // Export types for use in other files
@@ -102,6 +160,12 @@ const initDB = async () => {
       }
       if (!db.objectStoreNames.contains('notifications')) {
         db.createObjectStore('notifications', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('templates')) {
+        db.createObjectStore('templates', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('campaigns')) {
+        db.createObjectStore('campaigns', { keyPath: 'id' });
       }
     },
   });
@@ -469,6 +533,203 @@ export interface WhatsAppSession {
   };
 }
 
+// Template and Campaign types
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  content: string;
+  category: 'marketing' | 'support' | 'notification' | 'custom';
+  variables: string[];
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  approvedBy?: string;
+  language: string;
+  description?: string;
+  tags?: string[];
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description?: string;
+  templateId: string;
+  status: 'draft' | 'scheduled' | 'running' | 'completed' | 'paused' | 'failed';
+  schedule: {
+    startDate: string;
+    endDate?: string;
+    timezone: string;
+    frequency: 'once' | 'daily' | 'weekly' | 'monthly';
+    daysOfWeek?: number[];
+    dayOfMonth?: number;
+    timeOfDay: string;
+  };
+  targetAudience: {
+    type: 'all' | 'group' | 'filtered';
+    groupId?: string;
+    filters?: {
+      field: string;
+      operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan';
+      value: string;
+    }[];
+  };
+  metrics: {
+    totalContacts: number;
+    sent: number;
+    delivered: number;
+    failed: number;
+    opened: number;
+    replied: number;
+    lastUpdated: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
+// Active tab operations
+export function getActiveTab(): string {
+  const tab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
+  return tab || 'dashboard';
+}
+
+export function setActiveTab(tab: string): void {
+  localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+}
+
+// Template operations
+export const getTemplates = async (): Promise<MessageTemplate[]> => {
+  try {
+    const database = await initDB();
+    return database.getAll('templates');
+  } catch (error) {
+    console.error('Failed to get templates:', error);
+    return [];
+  }
+};
+
+export const addTemplate = async (data: Omit<MessageTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<MessageTemplate> => {
+  try {
+    const database = await initDB();
+    const now = new Date().toISOString();
+    const template: MessageTemplate = {
+      ...data,
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    await database.add('templates', template);
+    return template;
+  } catch (error) {
+    console.error('Failed to add template:', error);
+    throw new Error('Failed to add template');
+  }
+};
+
+export const updateTemplate = async (id: string, data: Partial<Omit<MessageTemplate, 'id' | 'createdAt' | 'updatedAt'>>): Promise<MessageTemplate> => {
+  try {
+    const database = await initDB();
+    const template = await database.get('templates', id);
+    if (!template) throw new Error('Template not found');
+    
+    const now = new Date().toISOString();
+    const updatedTemplate: MessageTemplate = {
+      ...template,
+      ...data,
+      updatedAt: now,
+    };
+
+    await database.put('templates', updatedTemplate);
+    return updatedTemplate;
+  } catch (error) {
+    console.error('Failed to update template:', error);
+    throw new Error('Failed to update template');
+  }
+};
+
+export const deleteTemplate = async (id: string): Promise<void> => {
+  try {
+    const database = await initDB();
+    await database.delete('templates', id);
+  } catch (error) {
+    console.error('Failed to delete template:', error);
+    throw new Error('Failed to delete template');
+  }
+};
+
+// Campaign operations
+export const getCampaigns = async (): Promise<Campaign[]> => {
+  try {
+    const database = await initDB();
+    return database.getAll('campaigns');
+  } catch (error) {
+    console.error('Failed to get campaigns:', error);
+    return [];
+  }
+};
+
+export const addCampaign = async (data: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'metrics'>): Promise<Campaign> => {
+  try {
+    const database = await initDB();
+    const now = new Date().toISOString();
+    const campaign: Campaign = {
+      ...data,
+      id: crypto.randomUUID(),
+      metrics: {
+        totalContacts: 0,
+        sent: 0,
+        delivered: 0,
+        failed: 0,
+        opened: 0,
+        replied: 0,
+        lastUpdated: now,
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    await database.add('campaigns', campaign);
+    return campaign;
+  } catch (error) {
+    console.error('Failed to add campaign:', error);
+    throw new Error('Failed to add campaign');
+  }
+};
+
+export const updateCampaign = async (id: string, data: Partial<Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Campaign> => {
+  try {
+    const database = await initDB();
+    const campaign = await database.get('campaigns', id);
+    if (!campaign) throw new Error('Campaign not found');
+    
+    const now = new Date().toISOString();
+    const updatedCampaign: Campaign = {
+      ...campaign,
+      ...data,
+      updatedAt: now,
+    };
+
+    await database.put('campaigns', updatedCampaign);
+    return updatedCampaign;
+  } catch (error) {
+    console.error('Failed to update campaign:', error);
+    throw new Error('Failed to update campaign');
+  }
+};
+
+export const deleteCampaign = async (id: string): Promise<void> => {
+  try {
+    const database = await initDB();
+    await database.delete('campaigns', id);
+  } catch (error) {
+    console.error('Failed to delete campaign:', error);
+    throw new Error('Failed to delete campaign');
+  }
+};
+
+// Update STORAGE_KEYS to include new keys
 const STORAGE_KEYS = {
   SESSION: 'whatsapp_session',
   CONTACTS: 'whatsapp_contacts',
@@ -476,7 +737,10 @@ const STORAGE_KEYS = {
   MESSAGES: 'whatsapp_messages',
   SETTINGS: 'whatsapp_settings',
   NOTIFICATIONS: 'whatsapp_notifications',
-};
+  ACTIVE_TAB: 'whatsapp_active_tab',
+  TEMPLATES: 'whatsapp_templates',
+  CAMPAIGNS: 'whatsapp_campaigns',
+} as const;
 
 export const getSession = (): WhatsAppSession => {
   const session = localStorage.getItem(STORAGE_KEYS.SESSION);

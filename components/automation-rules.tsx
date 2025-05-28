@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Edit, Trash2, Clock, MessageSquare, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { getTemplates } from "@/lib/storage"
+import { getTemplates, getActiveTab, setActiveTab } from "@/lib/storage"
+import type { MessageTemplate } from "@/lib/storage"
 
 interface AutomationRule {
   id: string
@@ -55,6 +56,24 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [activeType, setActiveType] = useState<AutomationRule['type']>("time")
+  const [templates, setTemplates] = useState<MessageTemplate[]>([])
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const loadedTemplates = await getTemplates();
+        setTemplates(loadedTemplates);
+      } catch (error) {
+        console.error('Failed to load templates:', error);
+        onNotification({
+          type: "error",
+          title: "Error",
+          message: "Failed to load message templates",
+        });
+      }
+    };
+    loadTemplates();
+  }, [onNotification]);
 
   const handleAddRule = (rule: Omit<AutomationRule, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newRule: AutomationRule = {
@@ -118,6 +137,10 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
   }
 
   const filteredRules = rules.filter(rule => rule.type === activeType)
+
+  const getEventType = (event: { type: "contact_added" | "contact_removed" | "group_created" | "group_deleted" } | undefined) => {
+    return event?.type ?? '';
+  };
 
   return (
     <div className="space-y-6">
@@ -196,11 +219,11 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
                                 </span>
                               </div>
                             )}
-                            {rule.trigger.type === 'event' && (
+                            {rule.trigger.type === 'event' && rule.trigger.event && (
                               <div className="flex items-center space-x-2">
                                 <Bell className="h-4 w-4" />
                                 <span>
-                                  {rule.trigger.event?.type.replace('_', ' ')}
+                                  {getEventType(rule.trigger.event as { type: "contact_added" | "contact_removed" | "group_created" | "group_deleted" })}
                                 </span>
                               </div>
                             )}
@@ -277,7 +300,6 @@ interface RuleFormProps {
 }
 
 function RuleForm({ initialData, onSubmit, onCancel }: RuleFormProps) {
-  const templates = getTemplates()
   const [formData, setFormData] = useState(() => ({
     name: initialData?.name || "",
     description: initialData?.description || "",
@@ -287,7 +309,7 @@ function RuleForm({ initialData, onSubmit, onCancel }: RuleFormProps) {
       type: "time",
       time: {
         days: [],
-        time: "09:00",
+        time: "",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     },
@@ -296,6 +318,20 @@ function RuleForm({ initialData, onSubmit, onCancel }: RuleFormProps) {
       templateId: "",
     },
   }))
+
+  const [availableTemplates, setAvailableTemplates] = useState<MessageTemplate[]>([])
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const loadedTemplates = await getTemplates()
+        setAvailableTemplates(loadedTemplates)
+      } catch (error) {
+        console.error('Failed to load templates:', error)
+      }
+    }
+    loadTemplates()
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -504,26 +540,29 @@ function RuleForm({ initialData, onSubmit, onCancel }: RuleFormProps) {
         </Select>
 
         {formData.action.type === 'send_message' && (
-          <Select
-            value={formData.action.templateId}
-            onValueChange={(value) =>
-              setFormData(prev => ({
-                ...prev,
-                action: { ...prev.action, templateId: value },
-              }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a template" />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
-                  {template.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="templateId">Message Template</Label>
+            <Select
+              value={formData.action.templateId}
+              onValueChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  action: { ...prev.action, templateId: value },
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a template" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTemplates.map((template: MessageTemplate) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         {formData.action.type === 'send_notification' && (
