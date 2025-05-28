@@ -251,6 +251,7 @@ export interface Notification {
   message: string;
   read: boolean;
   createdAt: string;
+  metadata?: Record<string, any>;
 }
 
 export interface Settings {
@@ -533,26 +534,100 @@ export function deleteMessage(id: string): void {
 }
 
 // Notification operations
-export const getNotifications = (): Notification[] => getItem(STORAGE_KEYS.NOTIFICATIONS, []);
-export const addNotification = (notification: Omit<Notification, 'id' | 'createdAt'>): Notification => {
-  const notifications = getNotifications();
-  const newNotification: Notification = {
-    ...notification,
-    id: `notification_${Date.now()}`,
-    createdAt: new Date().toISOString(),
-  };
-  setItem(STORAGE_KEYS.NOTIFICATIONS, [newNotification, ...notifications].slice(0, 50));
-  return newNotification;
+export const getNotifications = (): Notification[] => {
+  try {
+    return getItem(STORAGE_KEYS.NOTIFICATIONS, []);
+  } catch (error) {
+    console.error('Failed to get notifications:', error);
+    return [];
+  }
 };
+
+export const addNotification = (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>): Notification => {
+  try {
+    const notifications = getNotifications();
+    const newNotification: Notification = {
+      ...notification,
+      id: `notification_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    // Keep only the latest 50 notifications
+    const updatedNotifications = [newNotification, ...notifications].slice(0, 50);
+    setItem(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+    return newNotification;
+  } catch (error) {
+    console.error('Failed to add notification:', error);
+    throw new Error('Failed to add notification');
+  }
+};
+
 export const markNotificationAsRead = (id: string): void => {
-  const notifications = getNotifications();
-  const updatedNotifications = notifications.map(notification =>
-    notification.id === id ? { ...notification, read: true } : notification
-  );
-  setItem(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+  try {
+    const notifications = getNotifications();
+    const updatedNotifications = notifications.map(notification =>
+      notification.id === id ? { ...notification, read: true } : notification
+    );
+    setItem(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+    throw new Error('Failed to mark notification as read');
+  }
 };
+
+export const markAllNotificationsAsRead = (): void => {
+  try {
+    const notifications = getNotifications();
+    const updatedNotifications = notifications.map(notification => ({
+      ...notification,
+      read: true
+    }));
+    setItem(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+    throw new Error('Failed to mark all notifications as read');
+  }
+};
+
 export const clearNotifications = (): void => {
-  setItem(STORAGE_KEYS.NOTIFICATIONS, []);
+  try {
+    setItem(STORAGE_KEYS.NOTIFICATIONS, []);
+  } catch (error) {
+    console.error('Failed to clear notifications:', error);
+    throw new Error('Failed to clear notifications');
+  }
+};
+
+export const deleteNotification = (id: string): void => {
+  try {
+    const notifications = getNotifications();
+    const updatedNotifications = notifications.filter(notification => notification.id !== id);
+    setItem(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
+    throw new Error('Failed to delete notification');
+  }
+};
+
+export const getUnreadNotificationsCount = (): number => {
+  try {
+    const notifications = getNotifications();
+    return notifications.filter(notification => !notification.read).length;
+  } catch (error) {
+    console.error('Failed to get unread notifications count:', error);
+    return 0;
+  }
+};
+
+export const getNotificationsByType = (type: Notification['type']): Notification[] => {
+  try {
+    const notifications = getNotifications();
+    return notifications.filter(notification => notification.type === type);
+  } catch (error) {
+    console.error('Failed to get notifications by type:', error);
+    return [];
+  }
 };
 
 // Settings operations

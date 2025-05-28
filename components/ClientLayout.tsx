@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/components/ui/use-toast"
 import { Sidebar } from "@/components/sidebar"
-import NotificationCenter from "@/components/notification-center"
+import { Notifications } from "@/components/notifications"
 import ContactList from "@/components/contact-list"
 import WhatsAppIntegration from "@/components/whatsapp-integration"
 import BulkSender from "@/components/bulk-sender"
@@ -42,37 +42,48 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    setContacts(getContacts())
-    setSession(getSession())
-    setNotifications(getNotifications())
-    setSettings(getSettings())
-    setIsClient(true)
-  }, [])
+    const loadData = async () => {
+      const [loadedContacts, loadedSession, loadedNotifications, loadedSettings] = await Promise.all([
+        getContacts(),
+        getSession(),
+        getNotifications(),
+        getSettings()
+      ]);
+      
+      setContacts(loadedContacts);
+      setSession(loadedSession);
+      setNotifications(loadedNotifications);
+      setSettings(loadedSettings);
+      setIsClient(true);
+    };
 
-  const { toast } = useToast()
+    loadData();
+  }, []);
+
+  const { toast } = useToast();
 
   const handleNotification = (notification: any) => {
-    setNotifications((prev: Notification[]) => [...prev, notification])
+    setNotifications((prev: Notification[]) => [...prev, notification]);
     toast({
       title: notification.title,
       description: notification.message,
       variant: notification.type,
-    })
-  }
+    });
+  };
 
   const handleContactsUpdate = (updatedContacts: Contact[]) => {
-    setContacts((prev: Contact[]) => updatedContacts)
-  }
+    setContacts((prev: Contact[]) => updatedContacts);
+  };
 
-  const handleSessionUpdate = (updates: Partial<WhatsAppSession>) => {
-    const updatedSession = updateSession(updates)
-    setSession(updatedSession)
-  }
+  const handleSessionUpdate = async (updates: Partial<WhatsAppSession>) => {
+    const updatedSession = await updateSession(updates);
+    setSession(updatedSession);
+  };
 
-  const handleSettingsUpdate = (updates: Partial<SettingsType>) => {
-    const updatedSettings = updateSettings(updates)
-    setSettings(updatedSettings)
-  }
+  const handleSettingsUpdate = async (updates: Partial<SettingsType>) => {
+    const updatedSettings = await updateSettings(updates);
+    setSettings(updatedSettings);
+  };
 
   const renderPage = () => {
     if (!isClient) {
@@ -109,10 +120,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 overflow-y-auto p-8">
         {renderPage()}
       </main>
-      <NotificationCenter
-        notifications={notifications}
-        onClearAll={() => setNotifications([])}
-      />
+      <div className="fixed top-4 right-4 z-50">
+        <Notifications />
+      </div>
       <Toaster />
     </div>
   )
