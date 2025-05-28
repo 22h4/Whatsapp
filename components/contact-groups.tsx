@@ -24,9 +24,10 @@ interface Contact {
 interface ContactGroup {
   id: string
   name: string
-  description: string
+  description?: string
   contactIds: string[]
-  createdAt: Date
+  createdAt: string
+  updatedAt: string
   color: string
 }
 
@@ -54,7 +55,8 @@ export default function ContactGroups({ groups, onGroupsUpdate }: ContactGroupsP
     const newGroup: ContactGroup = {
       ...groupData,
       id: `group_${Date.now()}`,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
+      color: groupData.color || "bg-blue-100 text-blue-800"
     }
     onGroupsUpdate([...groups, newGroup])
     setIsCreateDialogOpen(false)
@@ -87,7 +89,8 @@ export default function ContactGroups({ groups, onGroupsUpdate }: ContactGroupsP
   }
 
   const getGroupContacts = (group: ContactGroup) => {
-    return groups.find((g) => g.id === group.id)?.contactIds.map((id) => groups.find((g) => g.id === id))
+    const groupContacts = groups.find((g) => g.id === group.id)?.contactIds
+    return groupContacts?.map((id) => groups.find((g) => g.id === id)) || []
   }
 
   if (isMobile) {
@@ -147,7 +150,7 @@ export default function ContactGroups({ groups, onGroupsUpdate }: ContactGroupsP
               </div>
               <div className="flex justify-between items-center">
                 <Badge className={group.color}>{getGroupContacts(group)?.length} contacts</Badge>
-                <span className="text-xs text-muted-foreground">{group.createdAt.toLocaleDateString()}</span>
+                <span className="text-xs text-muted-foreground">{group.createdAt}</span>
               </div>
             </Card>
           ))}
@@ -243,7 +246,7 @@ export default function ContactGroups({ groups, onGroupsUpdate }: ContactGroupsP
                           <Users className="h-3 w-3 mr-1" />
                           {getGroupContacts(group)?.length} contacts
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{group.createdAt.toLocaleDateString()}</span>
+                        <span className="text-xs text-muted-foreground">{group.createdAt}</span>
                       </div>
 
                       <div className="space-y-2">
@@ -327,7 +330,6 @@ function GroupForm({ groups, initialData, onSubmit, onCancel }: GroupFormProps) 
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
   const [selectedColor, setSelectedColor] = useState(initialData?.color || "bg-blue-100 text-blue-800")
-  const [selectedContacts, setSelectedContacts] = useState<string[]>(initialData?.contactIds || [])
 
   const colors = [
     "bg-blue-100 text-blue-800",
@@ -346,14 +348,13 @@ function GroupForm({ groups, initialData, onSubmit, onCancel }: GroupFormProps) 
         name,
         description,
         color: selectedColor,
-        contactIds: selectedContacts,
       })
     } else {
       onSubmit({
         name,
         description,
         color: selectedColor,
-        contactIds: selectedContacts,
+        contactIds: [],
       })
     }
   }
@@ -393,31 +394,6 @@ function GroupForm({ groups, initialData, onSubmit, onCancel }: GroupFormProps) 
                 selectedColor === color ? "border-gray-800" : "border-gray-300"
               }`}
             />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <Label>Select Contacts ({selectedContacts.length} selected)</Label>
-        <div className="border rounded-lg max-h-48 overflow-auto p-2 space-y-1 mt-2">
-          {groups.map((group) => (
-            <label
-              key={group.id}
-              className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
-            >
-              <Checkbox
-                checked={selectedContacts.includes(group.id)}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    setSelectedContacts((prev) => [...prev, group.id])
-                  } else {
-                    setSelectedContacts((prev) => prev.filter((id) => id !== group.id))
-                  }
-                }}
-              />
-              <span className="flex-1">{group.name}</span>
-              <span className="text-sm text-muted-foreground">{group.description}</span>
-            </label>
           ))}
         </div>
       </div>

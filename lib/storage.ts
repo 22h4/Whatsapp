@@ -27,6 +27,7 @@ interface WhatsAppDBSchema extends DBSchema {
       contactIds: string[];
       createdAt: string;
       updatedAt: string;
+      color: string;
     };
   };
   messages: {
@@ -231,6 +232,7 @@ export const addGroup = async (data: Omit<Group, 'id' | 'createdAt' | 'updatedAt
     id,
     createdAt: now,
     updatedAt: now,
+    color: "bg-blue-100 text-blue-800",
   };
   
   await database.add('groups', group);

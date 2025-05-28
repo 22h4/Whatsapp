@@ -10,86 +10,35 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useMobile } from "@/hooks/use-mobile"
-import { useLocalStorage } from "@/hooks/use-local-storage"
 
-interface MessageRecord {
+interface Message {
   id: string
-  recipient: string
-  phone: string
-  message: string
-  status: "sent" | "delivered" | "read" | "failed"
-  timestamp: Date
-  campaign?: string
-  error?: string
-  deliveredAt?: Date
-  readAt?: Date
+  content: string
+  scheduledAt: string
+  status: "pending" | "sent" | "failed"
+  contactId: string
+  createdAt: string
+  updatedAt: string
+  attachments?: File[]
 }
 
 interface MessageHistoryProps {
-  onNotification: (notification: any) => void
+  messages: Message[]
 }
 
-export default function MessageHistory({ onNotification }: MessageHistoryProps) {
+export default function MessageHistory({ messages }: MessageHistoryProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [dateFilter, setDateFilter] = useState<string>("7d")
   const isMobile = useMobile()
 
-  // Mock data for demonstration
-  const [messageHistory, setMessageHistory] = useLocalStorage<MessageRecord[]>("whatsapp-message-history", [
-    // Keep the existing mock data as initial data
-    {
-      id: "msg_001",
-      recipient: "John Doe",
-      phone: "+1234567890",
-      message: "Hi John, your order #12345 has been confirmed. Total: $99.99. Thank you!",
-      status: "read",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      campaign: "Order Confirmations",
-      deliveredAt: new Date(Date.now() - 2 * 60 * 60 * 1000 + 30000),
-      readAt: new Date(Date.now() - 2 * 60 * 60 * 1000 + 120000),
-    },
-    {
-      id: "msg_002",
-      recipient: "Jane Smith",
-      phone: "+0987654321",
-      message: "Hello Jane, this is a reminder about your appointment on 2024-01-20 at 10:00 AM.",
-      status: "delivered",
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      campaign: "Appointment Reminders",
-      deliveredAt: new Date(Date.now() - 4 * 60 * 60 * 1000 + 45000),
-    },
-    {
-      id: "msg_003",
-      recipient: "Bob Johnson",
-      phone: "+1122334455",
-      message: "Welcome to our service, Bob! We're excited to have you on board.",
-      status: "failed",
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      campaign: "Welcome Messages",
-      error: "Invalid phone number",
-    },
-    {
-      id: "msg_004",
-      recipient: "Alice Brown",
-      phone: "+5566778899",
-      message: "Hi Alice, your payment of $150.00 is due on 2024-01-25. Please pay to avoid late fees.",
-      status: "sent",
-      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
-      campaign: "Payment Reminders",
-    },
-  ])
-
-  const filteredMessages = messageHistory.filter((message) => {
-    const matchesSearch =
-      message.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      message.phone.includes(searchTerm) ||
-      message.message.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredMessages = messages.filter((message) => {
+    const matchesSearch = message.content.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || message.status === statusFilter
 
     const now = new Date()
-    const messageDate = message.timestamp
+    const messageDate = new Date(message.scheduledAt)
     let matchesDate = true
 
     if (dateFilter === "1d") {
@@ -103,24 +52,21 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
     return matchesSearch && matchesStatus && matchesDate
   })
 
-  const getStatusIcon = (status: MessageRecord["status"]) => {
+  const getStatusIcon = (status: Message["status"]) => {
     switch (status) {
       case "sent":
-        return <Clock className="h-4 w-4 text-blue-500" />
-      case "delivered":
         return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "read":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case "pending":
+        return <Clock className="h-4 w-4 text-blue-500" />
       case "failed":
         return <XCircle className="h-4 w-4 text-red-500" />
     }
   }
 
-  const getStatusBadge = (status: MessageRecord["status"]) => {
+  const getStatusBadge = (status: Message["status"]) => {
     const variants = {
-      sent: "bg-blue-100 text-blue-800",
-      delivered: "bg-green-100 text-green-800",
-      read: "bg-green-100 text-green-800",
+      sent: "bg-green-100 text-green-800",
+      pending: "bg-blue-100 text-blue-800",
       failed: "bg-red-100 text-red-800",
     }
 
@@ -129,10 +75,10 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
 
   const exportHistory = () => {
     const csvContent = [
-      "Recipient,Phone,Message,Status,Timestamp,Campaign,Error",
+      "ID,Content,Scheduled At,Status,Contact ID,Created At,Updated At",
       ...filteredMessages.map(
         (msg) =>
-          `"${msg.recipient}","${msg.phone}","${msg.message}","${msg.status}","${msg.timestamp.toISOString()}","${msg.campaign || ""}","${msg.error || ""}"`,
+          `"${msg.id}","${msg.content}","${msg.scheduledAt}","${msg.status}","${msg.contactId}","${msg.createdAt}","${msg.updatedAt}"`,
       ),
     ].join("\n")
 
@@ -143,12 +89,6 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
     a.download = `message-history-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
-
-    onNotification({
-      type: "success",
-      title: "Export Complete",
-      message: "Message history exported successfully",
-    })
   }
 
   if (isMobile) {
@@ -178,8 +118,7 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="read">Read</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
@@ -204,8 +143,7 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
               <div className="space-y-3">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="font-medium">{message.recipient}</h3>
-                    <p className="text-sm text-muted-foreground">{message.phone}</p>
+                    <p className="text-sm line-clamp-2">{message.content}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(message.status)}
@@ -213,22 +151,10 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
                   </div>
                 </div>
 
-                <div className="text-sm">
-                  <p className="line-clamp-2">{message.message}</p>
-                </div>
-
                 <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>{message.timestamp.toLocaleString()}</span>
-                  {message.campaign && (
-                    <Badge variant="outline" className="text-xs">
-                      {message.campaign}
-                    </Badge>
-                  )}
+                  <span>{new Date(message.scheduledAt).toLocaleString()}</span>
+                  <span>Contact ID: {message.contactId}</span>
                 </div>
-
-                {message.error && (
-                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded">Error: {message.error}</div>
-                )}
 
                 <Dialog>
                   <DialogTrigger asChild>
@@ -248,18 +174,6 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
             </Card>
           ))}
         </div>
-
-        {filteredMessages.length === 0 && (
-          <Card className="p-8 text-center">
-            <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-medium mb-2">No messages found</h3>
-            <p className="text-sm text-muted-foreground">
-              {searchTerm || statusFilter !== "all" || dateFilter !== "all"
-                ? "Try adjusting your filters"
-                : "Start sending messages to see history here"}
-            </p>
-          </Card>
-        )}
       </div>
     )
   }
@@ -271,75 +185,68 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Message History</CardTitle>
-              <CardDescription>View and track all sent messages</CardDescription>
+              <CardDescription>View and manage your message history</CardDescription>
             </div>
-            <Button onClick={exportHistory}>
+            <Button variant="outline" onClick={exportHistory}>
               <Download className="h-4 w-4 mr-2" />
               Export History
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by recipient, phone, or message content..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search messages..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1d">Last 24h</SelectItem>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="all">All time</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="read">Read</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1d">Last 24 hours</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {filteredMessages.length > 0 ? (
-            <div className="border rounded-lg">
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Recipient</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Message</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Campaign</TableHead>
+                    <TableHead>Scheduled At</TableHead>
+                    <TableHead>Contact ID</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredMessages.map((message) => (
                     <TableRow key={message.id}>
-                      <TableCell className="font-medium">{message.recipient}</TableCell>
-                      <TableCell>{message.phone}</TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate" title={message.message}>
-                          {message.message}
-                        </div>
+                      <TableCell className="max-w-[300px]">
+                        <p className="truncate">{message.content}</p>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
@@ -347,8 +254,8 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
                           {getStatusBadge(message.status)}
                         </div>
                       </TableCell>
-                      <TableCell>{message.timestamp.toLocaleString()}</TableCell>
-                      <TableCell>{message.campaign && <Badge variant="outline">{message.campaign}</Badge>}</TableCell>
+                      <TableCell>{new Date(message.scheduledAt).toLocaleString()}</TableCell>
+                      <TableCell>{message.contactId}</TableCell>
                       <TableCell>
                         <Dialog>
                           <DialogTrigger asChild>
@@ -369,29 +276,7 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
                 </TableBody>
               </Table>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No messages found</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm || statusFilter !== "all" || dateFilter !== "all"
-                  ? "Try adjusting your search criteria or filters"
-                  : "Start sending messages to see your history here"}
-              </p>
-              {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("")
-                    setStatusFilter("all")
-                    setDateFilter("7d")
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -399,71 +284,50 @@ export default function MessageHistory({ onNotification }: MessageHistoryProps) 
 }
 
 interface MessageDetailsProps {
-  message: MessageRecord
+  message: Message
 }
 
 function MessageDetails({ message }: MessageDetailsProps) {
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="font-medium mb-2">Recipient Information</h4>
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Name:</span>
-            <span>{message.recipient}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Phone:</span>
-            <span>{message.phone}</span>
-          </div>
-          {message.campaign && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Campaign:</span>
-              <span>{message.campaign}</span>
-            </div>
-          )}
+        <h4 className="text-sm font-medium mb-1">Message Content</h4>
+        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <h4 className="text-sm font-medium mb-1">Status</h4>
+          <p className="text-sm">{message.status}</p>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium mb-1">Scheduled At</h4>
+          <p className="text-sm">{new Date(message.scheduledAt).toLocaleString()}</p>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium mb-1">Contact ID</h4>
+          <p className="text-sm">{message.contactId}</p>
+        </div>
+        <div>
+          <h4 className="text-sm font-medium mb-1">Created At</h4>
+          <p className="text-sm">{new Date(message.createdAt).toLocaleString()}</p>
         </div>
       </div>
 
-      <div>
-        <h4 className="font-medium mb-2">Message Content</h4>
-        <div className="p-3 bg-muted/50 rounded text-sm whitespace-pre-wrap">{message.message}</div>
-      </div>
-
-      <div>
-        <h4 className="font-medium mb-2">Delivery Timeline</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full" />
-            <span className="text-muted-foreground">Sent:</span>
-            <span>{message.timestamp.toLocaleString()}</span>
+      {message.attachments && message.attachments.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-1">Attachments</h4>
+          <div className="space-y-2">
+            {message.attachments.map((file, index) => (
+              <div key={index} className="flex items-center space-x-2 text-sm">
+                <MessageSquare className="h-4 w-4" />
+                <span>{file.name}</span>
+                <span className="text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
+              </div>
+            ))}
           </div>
-
-          {message.deliveredAt && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full" />
-              <span className="text-muted-foreground">Delivered:</span>
-              <span>{message.deliveredAt.toLocaleString()}</span>
-            </div>
-          )}
-
-          {message.readAt && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-600 rounded-full" />
-              <span className="text-muted-foreground">Read:</span>
-              <span>{message.readAt.toLocaleString()}</span>
-            </div>
-          )}
-
-          {message.error && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full" />
-              <span className="text-muted-foreground">Error:</span>
-              <span className="text-red-600">{message.error}</span>
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

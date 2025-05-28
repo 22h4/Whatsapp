@@ -31,6 +31,7 @@ import {
   type Message,
   type Settings as SettingsType,
   type WhatsAppSession,
+  addGroup,
 } from "@/lib/storage"
 
 const defaultSettings: SettingsType = {
@@ -107,11 +108,12 @@ export default function WhatsAppAutomationApp() {
     setActiveTab(tab)
   }
 
+  // Calculate message stats
   const stats = {
-    total: contacts.length,
+    total: messages.length,
     sent: messages.filter(m => m.status === 'sent').length,
     failed: messages.filter(m => m.status === 'failed').length,
-    pending: messages.filter(m => m.status === 'pending').length,
+    pending: messages.filter(m => m.status === 'pending').length
   }
 
   const handleNotification = (type: 'success' | 'error', title: string, message: string) => {
@@ -126,6 +128,19 @@ export default function WhatsAppAutomationApp() {
     const newSession = { ...session, ...updates }
     updateSession(newSession)
     setSession(newSession)
+  }
+
+  // Update the group creation logic
+  const handleGroupCreate = async (groupData: Omit<Group, "id" | "createdAt" | "updatedAt">) => {
+    try {
+      const newGroup = await addGroup({
+        ...groupData,
+        color: "bg-blue-100 text-blue-800" // Add default color
+      })
+      setGroups([...groups, newGroup])
+    } catch (error) {
+      console.error("Failed to create group:", error)
+    }
   }
 
   // Don't render anything until we're on the client
@@ -204,7 +219,21 @@ export default function WhatsAppAutomationApp() {
             <ContactGroups groups={groups} onGroupsUpdate={setGroups} />
           )}
           {activeTab === 'compose' && (
-            <MessageComposer onMessageSent={(message) => setMessages([...messages, message])} />
+            <MessageComposer 
+              onMessageSent={(message) => {
+                const newMessage = {
+                  id: `msg_${Date.now()}`,
+                  content: message.content,
+                  scheduledAt: new Date().toISOString(),
+                  status: 'pending' as const,
+                  contactId: '', // This will be set when the message is actually sent
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  attachments: message.attachments
+                }
+                setMessages([...messages, newMessage])
+              }} 
+            />
           )}
           {activeTab === 'integration' && (
             <WhatsAppIntegration session={session} onSessionUpdate={handleSessionUpdate} />
@@ -216,7 +245,14 @@ export default function WhatsAppAutomationApp() {
             <MessageHistory messages={messages} />
           )}
           {activeTab === 'reports' && (
-            <StatusReports stats={stats} />
+            <StatusReports
+              stats={{
+                total: messages.length,
+                sent: messages.filter((m) => m.status === "sent").length,
+                failed: messages.filter((m) => m.status === "failed").length,
+                pending: messages.filter((m) => m.status === "pending").length,
+              }}
+            />
           )}
         </div>
       </main>

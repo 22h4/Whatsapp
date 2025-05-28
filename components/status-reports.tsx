@@ -8,8 +8,20 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default function StatusReports() {
+interface StatusReportsProps {
+  stats: {
+    total: number
+    sent: number
+    failed: number
+    pending: number
+  }
+}
+
+export default function StatusReports({ stats }: StatusReportsProps) {
   const [dateRange, setDateRange] = useState("7d")
+
+  // Calculate success rate
+  const successRate = stats.total > 0 ? ((stats.sent / stats.total) * 100).toFixed(1) : "0.0"
 
   // Mock data for demonstration
   const mockCampaigns = [
@@ -41,14 +53,6 @@ export default function StatusReports() {
       successRate: 95.6,
     },
   ]
-
-  const mockStats = {
-    totalSent: 284,
-    totalDelivered: 275,
-    totalFailed: 9,
-    averageSuccessRate: 96.8,
-    trendsUp: true,
-  }
 
   const mockErrorReasons = [
     { reason: "Invalid phone number", count: 4 },
@@ -107,7 +111,7 @@ export default function StatusReports() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold">{mockStats.totalSent}</div>
+                    <div className="text-2xl font-bold">{stats.total}</div>
                     <div className="text-sm text-muted-foreground">Messages Sent</div>
                   </div>
                   <MessageSquare className="h-8 w-8 text-blue-500" />
@@ -119,15 +123,11 @@ export default function StatusReports() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-green-600">{mockStats.totalDelivered}</div>
+                    <div className="text-2xl font-bold text-green-600">{stats.sent}</div>
                     <div className="text-sm text-muted-foreground">Delivered</div>
                   </div>
                   <div className="flex items-center">
-                    {mockStats.trendsUp ? (
-                      <TrendingUp className="h-8 w-8 text-green-500" />
-                    ) : (
-                      <TrendingDown className="h-8 w-8 text-red-500" />
-                    )}
+                    <TrendingUp className="h-8 w-8 text-green-500" />
                   </div>
                 </div>
               </CardContent>
@@ -137,7 +137,7 @@ export default function StatusReports() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-red-600">{mockStats.totalFailed}</div>
+                    <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
                     <div className="text-sm text-muted-foreground">Failed</div>
                   </div>
                   <BarChart3 className="h-8 w-8 text-red-500" />
@@ -149,7 +149,7 @@ export default function StatusReports() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold">{mockStats.averageSuccessRate}%</div>
+                    <div className="text-2xl font-bold">{successRate}%</div>
                     <div className="text-sm text-muted-foreground">Success Rate</div>
                   </div>
                   <div className="text-green-500">
@@ -251,21 +251,17 @@ export default function StatusReports() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span>Average delivery time</span>
-                        <Badge>2.3 seconds</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Success Rate</span>
+                        <span className="font-medium">{successRate}%</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Peak sending hour</span>
-                        <Badge>10:00 AM</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Pending Messages</span>
+                        <span className="font-medium">{stats.pending}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Best performing day</span>
-                        <Badge>Tuesday</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Messages per minute</span>
-                        <Badge>30 msg/min</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Failed Messages</span>
+                        <span className="font-medium text-red-600">{stats.failed}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -273,25 +269,21 @@ export default function StatusReports() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Usage Statistics</CardTitle>
+                    <CardTitle>Message Distribution</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span>Total contacts</span>
-                        <Badge variant="secondary">1,247</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total Messages</span>
+                        <span className="font-medium">{stats.total}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Active campaigns</span>
-                        <Badge variant="secondary">3</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Delivered</span>
+                        <span className="font-medium text-green-600">{stats.sent}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>Scheduled messages</span>
-                        <Badge variant="secondary">12</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>API calls this month</span>
-                        <Badge variant="secondary">2,847</Badge>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Pending</span>
+                        <span className="font-medium text-blue-600">{stats.pending}</span>
                       </div>
                     </div>
                   </CardContent>
