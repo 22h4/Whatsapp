@@ -60,25 +60,13 @@ interface WhatsAppDBSchema extends DBSchema {
       apiKey?: string;
     };
   };
-  notifications: {
-    key: string;
-    value: {
-      id: string;
-      type: 'success' | 'error' | 'warning' | 'info';
-      title: string;
-      message: string;
-      read: boolean;
-      createdAt: string;
-      metadata?: Record<string, any>;
-    };
-  };
   templates: {
     key: string;
     value: {
       id: string;
       name: string;
       content: string;
-      category: 'marketing' | 'support' | 'notification' | 'custom';
+      category: 'marketing' | 'support' | 'custom';
       variables: string[];
       status: 'draft' | 'pending' | 'approved' | 'rejected';
       createdAt: string;
@@ -136,7 +124,6 @@ interface WhatsAppDBSchema extends DBSchema {
 export type Contact = WhatsAppDBSchema['contacts']['value'];
 export type Group = WhatsAppDBSchema['groups']['value'];
 export type Message = WhatsAppDBSchema['messages']['value'];
-export type Notification = WhatsAppDBSchema['notifications']['value'];
 export type Settings = WhatsAppDBSchema['settings']['value'];
 
 // Initialize database
@@ -367,101 +354,6 @@ export const updateSettings = async (updates: Partial<Omit<Settings, 'id'>>): Pr
   }
 };
 
-// Notification operations
-export const getNotifications = async (): Promise<Notification[]> => {
-  try {
-    const database = await initDB();
-    return database.getAll('notifications');
-  } catch (error) {
-    console.error('Failed to get notifications:', error);
-    return [];
-  }
-};
-
-export const addNotification = async (data: Omit<Notification, 'id' | 'read' | 'createdAt'>): Promise<Notification> => {
-  try {
-    const database = await initDB();
-    const now = new Date().toISOString();
-    const newNotification: Notification = {
-      ...data,
-      id: crypto.randomUUID(),
-      read: false,
-      createdAt: now,
-    };
-
-    await database.add('notifications', newNotification);
-    return newNotification;
-  } catch (error) {
-    console.error('Failed to add notification:', error);
-    throw new Error('Failed to add notification');
-  }
-};
-
-export const markNotificationAsRead = async (id: string): Promise<void> => {
-  try {
-    const database = await initDB();
-    const notification = await database.get('notifications', id);
-    if (notification) {
-      notification.read = true;
-      await database.put('notifications', notification);
-    }
-  } catch (error) {
-    console.error('Failed to mark notification as read:', error);
-    throw new Error('Failed to mark notification as read');
-  }
-};
-
-export const markAllNotificationsAsRead = async (): Promise<void> => {
-  try {
-    const database = await initDB();
-    const tx = database.transaction('notifications', 'readwrite');
-    const notifications = await tx.store.getAll();
-    await Promise.all(
-      notifications.map((notification: Notification) => {
-        notification.read = true;
-        return tx.store.put(notification);
-      })
-    );
-    await tx.done;
-  } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
-    throw new Error('Failed to mark all notifications as read');
-  }
-};
-
-export const deleteNotification = async (id: string): Promise<void> => {
-  try {
-    const database = await initDB();
-    await database.delete('notifications', id);
-  } catch (error) {
-    console.error('Failed to delete notification:', error);
-    throw new Error('Failed to delete notification');
-  }
-};
-
-export const clearNotifications = async (): Promise<void> => {
-  try {
-    const database = await initDB();
-    const tx = database.transaction('notifications', 'readwrite');
-    await tx.store.clear();
-    await tx.done;
-  } catch (error) {
-    console.error('Failed to clear notifications:', error);
-    throw new Error('Failed to clear notifications');
-  }
-};
-
-export const getNotificationsByType = async (type: Notification['type']): Promise<Notification[]> => {
-  try {
-    const database = await initDB();
-    const notifications = await database.getAll('notifications');
-    return notifications.filter((notification: Notification) => notification.type === type);
-  } catch (error) {
-    console.error('Failed to get notifications by type:', error);
-    return [];
-  }
-};
-
 // Data cleanup
 export const cleanupData = async (): Promise<void> => {
   try {
@@ -476,13 +368,6 @@ export const cleanupData = async (): Promise<void> => {
       (message: Message) => new Date(message.createdAt) > cutoffDate
     );
     await Promise.all(recentMessages.map((message: Message) => database.put('messages', message)));
-
-    // Clean up old notifications
-    const notifications = await getNotifications();
-    const recentNotifications = notifications.filter(
-      (notification: Notification) => new Date(notification.createdAt) > cutoffDate
-    );
-    await Promise.all(recentNotifications.map((notification: Notification) => database.put('notifications', notification)));
   } catch (error) {
     console.error('Failed to cleanup data:', error);
     throw new Error('Failed to cleanup data');
@@ -516,6 +401,63 @@ export const importData = async (data: {
   }
 };
 
+// Update STORAGE_KEYS to remove notification key
+const STORAGE_KEYS = {
+  SESSION: 'whatsapp_session',
+  CONTACTS: 'whatsapp_contacts',
+  GROUPS: 'whatsapp_groups',
+  MESSAGES: 'whatsapp_messages',
+  SETTINGS: 'whatsapp_settings',
+  ACTIVE_TAB: 'whatsapp_active_tab',
+  TEMPLATES: 'whatsapp_templates',
+  CAMPAIGNS: 'whatsapp_campaigns',
+} as const;
+
+export const getSession = (): WhatsAppSession => {
+  const session = localStorage.getItem(STORAGE_KEYS.SESSION);
+  return session ? JSON.parse(session) : { isAuthenticated: false };
+};
+
+export const updateSession = (session: WhatsAppSession): void => {
+  localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+};
+
+export const clearSession = (): void => {
+  localStorage.removeItem(STORAGE_KEYS.SESSION);
+};
+
+// Export storage keys
+export { STORAGE_KEYS };
+
+// Export all data for backup/export
+export const exportData = async (): Promise<string> => {
+  try {
+    const database = await initDB();
+    const [contacts, groups, messages, settings, templates, campaigns] = await Promise.all([
+      database.getAll('contacts'),
+      database.getAll('groups'),
+      database.getAll('messages'),
+      database.getAll('settings'),
+      database.getAll('templates'),
+      database.getAll('campaigns'),
+    ]);
+
+    const data = {
+      contacts,
+      groups,
+      messages,
+      settings,
+      templates,
+      campaigns,
+    };
+
+    return JSON.stringify(data, null, 2);
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    throw new Error('Failed to export data');
+  }
+};
+
 // Session operations
 export interface WhatsAppSession {
   isAuthenticated: boolean;
@@ -535,7 +477,7 @@ export interface MessageTemplate {
   id: string;
   name: string;
   content: string;
-  category: 'marketing' | 'support' | 'notification' | 'custom';
+  category: 'marketing' | 'support' | 'custom';
   variables: string[];
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   createdAt: string;
@@ -597,13 +539,13 @@ export function setActiveTab(tab: string): void {
 
 // Template operations
 export const getTemplates = async (): Promise<MessageTemplate[]> => {
-  try {
-    const database = await initDB();
-    return database.getAll('templates');
-  } catch (error) {
-    console.error('Failed to get templates:', error);
-    return [];
-  }
+  const db = await openDB<WhatsAppDBSchema>('whatsapp-automation', 1)
+  return db.getAll('templates')
+};
+
+export const getTemplate = async (id: string): Promise<MessageTemplate | undefined> => {
+  const db = await openDB<WhatsAppDBSchema>('whatsapp-automation', 1)
+  return db.get('templates', id)
 };
 
 export const addTemplate = async (data: Omit<MessageTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<MessageTemplate> => {
@@ -724,69 +666,4 @@ export const deleteCampaign = async (id: string): Promise<void> => {
     console.error('Failed to delete campaign:', error);
     throw new Error('Failed to delete campaign');
   }
-};
-
-// Update STORAGE_KEYS to include new keys
-const STORAGE_KEYS = {
-  SESSION: 'whatsapp_session',
-  CONTACTS: 'whatsapp_contacts',
-  GROUPS: 'whatsapp_groups',
-  MESSAGES: 'whatsapp_messages',
-  SETTINGS: 'whatsapp_settings',
-  NOTIFICATIONS: 'whatsapp_notifications',
-  ACTIVE_TAB: 'whatsapp_active_tab',
-  TEMPLATES: 'whatsapp_templates',
-  CAMPAIGNS: 'whatsapp_campaigns',
-} as const;
-
-export const getSession = (): WhatsAppSession => {
-  const session = localStorage.getItem(STORAGE_KEYS.SESSION);
-  return session ? JSON.parse(session) : { isAuthenticated: false };
-};
-
-export const updateSession = (session: WhatsAppSession): void => {
-  localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
-};
-
-export const clearSession = (): void => {
-  localStorage.removeItem(STORAGE_KEYS.SESSION);
-};
-
-// Export storage keys
-export { STORAGE_KEYS };
-
-// Export all data for backup/export
-export const exportData = async (): Promise<string> => {
-  try {
-    const database = await initDB();
-    const [contacts, groups, messages, settings, templates, campaigns] = await Promise.all([
-      database.getAll('contacts'),
-      database.getAll('groups'),
-      database.getAll('messages'),
-      database.getAll('settings'),
-      database.getAll('templates'),
-      database.getAll('campaigns'),
-    ]);
-
-    const data = {
-      contacts,
-      groups,
-      messages,
-      settings,
-      templates,
-      campaigns,
-    };
-
-    return JSON.stringify(data, null, 2);
-  } catch (error) {
-    console.error('Failed to export data:', error);
-    throw new Error('Failed to export data');
-  }
-};
-
-// Get unread notifications count
-export const getUnreadNotificationsCount = async (): Promise<number> => {
-  const database = await initDB();
-  const notifications = await database.getAll('notifications');
-  return notifications.filter(n => !n.read).length;
 }; 

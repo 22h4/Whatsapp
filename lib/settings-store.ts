@@ -1,13 +1,25 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { Settings } from './storage'
 
-interface SettingsStore extends Settings {
+interface Settings {
+  theme: 'light' | 'dark' | 'system'
+  language: string
+  timezone: string
+  soundEnabled: boolean
+  defaultDelay: number
+  maxRetries: number
+  autoBackup: boolean
+  dataRetention: number
+  analyticsEnabled: boolean
+  crashReporting: boolean
+  webhookUrl?: string
+  apiKey?: string
+}
+
+interface SettingsStore {
+  settings: Settings
   setTheme: (theme: Settings['theme']) => void
   setLanguage: (language: string) => void
   setTimezone: (timezone: string) => void
-  setEmailNotifications: (enabled: boolean) => void
-  setPushNotifications: (enabled: boolean) => void
   setSoundEnabled: (enabled: boolean) => void
   setDefaultDelay: (delay: number) => void
   setMaxRetries: (retries: number) => void
@@ -15,15 +27,14 @@ interface SettingsStore extends Settings {
   setDataRetention: (days: number) => void
   setAnalyticsEnabled: (enabled: boolean) => void
   setCrashReporting: (enabled: boolean) => void
-  resetSettings: () => void
+  setWebhookUrl: (url: string) => void
+  setApiKey: (key: string) => void
 }
 
 const defaultSettings: Settings = {
   theme: 'system',
   language: 'en',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  emailNotifications: true,
-  pushNotifications: true,
   soundEnabled: true,
   defaultDelay: 2,
   maxRetries: 3,
@@ -33,26 +44,18 @@ const defaultSettings: Settings = {
   crashReporting: true,
 }
 
-export const useSettingsStore = create<SettingsStore>()(
-  persist(
-    (set) => ({
-      ...defaultSettings,
-      setTheme: (theme) => set({ theme }),
-      setLanguage: (language) => set({ language }),
-      setTimezone: (timezone) => set({ timezone }),
-      setEmailNotifications: (emailNotifications) => set({ emailNotifications }),
-      setPushNotifications: (pushNotifications) => set({ pushNotifications }),
-      setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
-      setDefaultDelay: (defaultDelay) => set({ defaultDelay }),
-      setMaxRetries: (maxRetries) => set({ maxRetries }),
-      setAutoBackup: (autoBackup) => set({ autoBackup }),
-      setDataRetention: (dataRetention) => set({ dataRetention }),
-      setAnalyticsEnabled: (analyticsEnabled) => set({ analyticsEnabled }),
-      setCrashReporting: (crashReporting) => set({ crashReporting }),
-      resetSettings: () => set(defaultSettings),
-    }),
-    {
-      name: 'whatsapp-settings',
-    }
-  )
-) 
+export const useSettingsStore = create<SettingsStore>((set) => ({
+  settings: defaultSettings,
+  setTheme: (theme) => set((state) => ({ settings: { ...state.settings, theme } })),
+  setLanguage: (language) => set((state) => ({ settings: { ...state.settings, language } })),
+  setTimezone: (timezone) => set((state) => ({ settings: { ...state.settings, timezone } })),
+  setSoundEnabled: (soundEnabled) => set((state) => ({ settings: { ...state.settings, soundEnabled } })),
+  setDefaultDelay: (defaultDelay) => set((state) => ({ settings: { ...state.settings, defaultDelay } })),
+  setMaxRetries: (maxRetries) => set((state) => ({ settings: { ...state.settings, maxRetries } })),
+  setAutoBackup: (autoBackup) => set((state) => ({ settings: { ...state.settings, autoBackup } })),
+  setDataRetention: (dataRetention) => set((state) => ({ settings: { ...state.settings, dataRetention } })),
+  setAnalyticsEnabled: (analyticsEnabled) => set((state) => ({ settings: { ...state.settings, analyticsEnabled } })),
+  setCrashReporting: (crashReporting) => set((state) => ({ settings: { ...state.settings, crashReporting } })),
+  setWebhookUrl: (webhookUrl) => set((state) => ({ settings: { ...state.settings, webhookUrl } })),
+  setApiKey: (apiKey) => set((state) => ({ settings: { ...state.settings, apiKey } })),
+})) 

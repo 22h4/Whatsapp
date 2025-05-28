@@ -31,12 +31,11 @@ interface ContactGroup {
 }
 
 interface ContactGroupsProps {
-  contacts: Contact[]
-  onNotification: (type: 'success' | 'error', title: string, message: string) => void
+  groups: ContactGroup[]
+  onGroupsUpdate: (groups: ContactGroup[]) => void
 }
 
-export default function ContactGroups({ contacts, onNotification }: ContactGroupsProps) {
-  const [groups, setGroups] = useLocalStorage<ContactGroup[]>("whatsapp-contact-groups", [])
+export default function ContactGroups({ groups, onGroupsUpdate }: ContactGroupsProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState<ContactGroup | null>(null)
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
@@ -57,59 +56,38 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
       id: `group_${Date.now()}`,
       createdAt: new Date(),
     }
-    setGroups((prev) => [...prev, newGroup])
+    onGroupsUpdate([...groups, newGroup])
     setIsCreateDialogOpen(false)
-    onNotification({
-      type: "success",
-      title: "Group Created",
-      message: `Group "${groupData.name}" created successfully`,
-    })
   }
 
   const updateGroup = (updatedGroup: ContactGroup) => {
-    setGroups((prev) => prev.map((group) => (group.id === updatedGroup.id ? updatedGroup : group)))
+    onGroupsUpdate(groups.map((group) => (group.id === updatedGroup.id ? updatedGroup : group)))
     setEditingGroup(null)
-    onNotification({
-      type: "success",
-      title: "Group Updated",
-      message: `Group "${updatedGroup.name}" updated successfully`,
-    })
   }
 
   const deleteGroup = (groupId: string) => {
-    const group = groups.find((g) => g.id === groupId)
-    setGroups((prev) => prev.filter((group) => group.id !== groupId))
-    onNotification({
-      type: "success",
-      title: "Group Deleted",
-      message: `Group "${group?.name}" deleted successfully`,
-    })
+    onGroupsUpdate(groups.filter((group) => group.id !== groupId))
   }
 
   const addContactsToGroup = (groupId: string, contactIds: string[]) => {
-    setGroups((prev) =>
-      prev.map((group) =>
+    onGroupsUpdate(
+      groups.map((group) =>
         group.id === groupId ? { ...group, contactIds: [...new Set([...group.contactIds, ...contactIds])] } : group,
       ),
     )
     setSelectedContacts([])
-    onNotification({
-      type: "success",
-      title: "Contacts Added",
-      message: `${contactIds.length} contacts added to group`,
-    })
   }
 
   const removeContactFromGroup = (groupId: string, contactId: string) => {
-    setGroups((prev) =>
-      prev.map((group) =>
+    onGroupsUpdate(
+      groups.map((group) =>
         group.id === groupId ? { ...group, contactIds: group.contactIds.filter((id) => id !== contactId) } : group,
       ),
     )
   }
 
   const getGroupContacts = (group: ContactGroup) => {
-    return contacts.filter((contact) => group.contactIds.includes(contact.id))
+    return groups.find((g) => g.id === group.id)?.contactIds.map((id) => groups.find((g) => g.id === id))
   }
 
   if (isMobile) {
@@ -128,7 +106,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
               <DialogHeader>
                 <DialogTitle>Create New Group</DialogTitle>
               </DialogHeader>
-              <GroupForm contacts={contacts} onSubmit={createGroup} onCancel={() => setIsCreateDialogOpen(false)} />
+              <GroupForm groups={groups} onSubmit={createGroup} onCancel={() => setIsCreateDialogOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
@@ -154,7 +132,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                       </DialogHeader>
                       {editingGroup && (
                         <GroupForm
-                          contacts={contacts}
+                          groups={groups}
                           initialData={editingGroup}
                           onSubmit={updateGroup}
                           onCancel={() => setEditingGroup(null)}
@@ -168,7 +146,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <Badge className={group.color}>{getGroupContacts(group).length} contacts</Badge>
+                <Badge className={group.color}>{getGroupContacts(group)?.length} contacts</Badge>
                 <span className="text-xs text-muted-foreground">{group.createdAt.toLocaleDateString()}</span>
               </div>
             </Card>
@@ -210,7 +188,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                 <DialogHeader>
                   <DialogTitle>Create New Group</DialogTitle>
                 </DialogHeader>
-                <GroupForm contacts={contacts} onSubmit={createGroup} onCancel={() => setIsCreateDialogOpen(false)} />
+                <GroupForm groups={groups} onSubmit={createGroup} onCancel={() => setIsCreateDialogOpen(false)} />
               </DialogContent>
             </Dialog>
           </div>
@@ -239,7 +217,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                             </DialogHeader>
                             {editingGroup && (
                               <GroupForm
-                                contacts={contacts}
+                                groups={groups}
                                 initialData={editingGroup}
                                 onSubmit={updateGroup}
                                 onCancel={() => setEditingGroup(null)}
@@ -263,7 +241,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                       <div className="flex justify-between items-center">
                         <Badge className={group.color}>
                           <Users className="h-3 w-3 mr-1" />
-                          {getGroupContacts(group).length} contacts
+                          {getGroupContacts(group)?.length} contacts
                         </Badge>
                         <span className="text-xs text-muted-foreground">{group.createdAt.toLocaleDateString()}</span>
                       </div>
@@ -283,7 +261,7 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                                 <DialogTitle>Add Contacts to {group.name}</DialogTitle>
                               </DialogHeader>
                               <ContactSelector
-                                contacts={contacts}
+                                groups={groups}
                                 excludeIds={group.contactIds}
                                 selectedIds={selectedContacts}
                                 onSelectionChange={setSelectedContacts}
@@ -294,24 +272,22 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
                         </div>
 
                         <div className="max-h-32 overflow-y-auto space-y-1">
-                          {getGroupContacts(group)
-                            .slice(0, 5)
-                            .map((contact) => (
-                              <div key={contact.id} className="flex justify-between items-center text-sm">
-                                <span className="truncate">{contact.name}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeContactFromGroup(group.id, contact.id)}
-                                  className="h-6 w-6 p-0 text-red-600"
-                                >
-                                  <UserMinus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          {getGroupContacts(group).length > 5 && (
+                          {getGroupContacts(group)?.slice(0, 5).map((contact) => (
+                            <div key={contact?.id} className="flex justify-between items-center text-sm">
+                              <span className="truncate">{contact?.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeContactFromGroup(group.id, contact?.id || "")}
+                                className="h-6 w-6 p-0 text-red-600"
+                              >
+                                <UserMinus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                          {getGroupContacts(group)?.length > 5 && (
                             <div className="text-xs text-muted-foreground">
-                              +{getGroupContacts(group).length - 5} more contacts
+                              +{getGroupContacts(group)?.length - 5} more contacts
                             </div>
                           )}
                         </div>
@@ -341,13 +317,13 @@ export default function ContactGroups({ contacts, onNotification }: ContactGroup
 }
 
 interface GroupFormProps {
-  contacts: Contact[]
+  groups: ContactGroup[]
   initialData?: ContactGroup
   onSubmit: (data: any) => void
   onCancel: () => void
 }
 
-function GroupForm({ contacts, initialData, onSubmit, onCancel }: GroupFormProps) {
+function GroupForm({ groups, initialData, onSubmit, onCancel }: GroupFormProps) {
   const [name, setName] = useState(initialData?.name || "")
   const [description, setDescription] = useState(initialData?.description || "")
   const [selectedColor, setSelectedColor] = useState(initialData?.color || "bg-blue-100 text-blue-800")
@@ -424,23 +400,23 @@ function GroupForm({ contacts, initialData, onSubmit, onCancel }: GroupFormProps
       <div>
         <Label>Select Contacts ({selectedContacts.length} selected)</Label>
         <div className="border rounded-lg max-h-48 overflow-auto p-2 space-y-1 mt-2">
-          {contacts.map((contact) => (
+          {groups.map((group) => (
             <label
-              key={contact.id}
+              key={group.id}
               className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer"
             >
               <Checkbox
-                checked={selectedContacts.includes(contact.id)}
+                checked={selectedContacts.includes(group.id)}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    setSelectedContacts((prev) => [...prev, contact.id])
+                    setSelectedContacts((prev) => [...prev, group.id])
                   } else {
-                    setSelectedContacts((prev) => prev.filter((id) => id !== contact.id))
+                    setSelectedContacts((prev) => prev.filter((id) => id !== group.id))
                   }
                 }}
               />
-              <span className="flex-1">{contact.name}</span>
-              <span className="text-sm text-muted-foreground">{contact.phone}</span>
+              <span className="flex-1">{group.name}</span>
+              <span className="text-sm text-muted-foreground">{group.description}</span>
             </label>
           ))}
         </div>
@@ -459,33 +435,33 @@ function GroupForm({ contacts, initialData, onSubmit, onCancel }: GroupFormProps
 }
 
 interface ContactSelectorProps {
-  contacts: Contact[]
+  groups: ContactGroup[]
   excludeIds: string[]
   selectedIds: string[]
   onSelectionChange: (ids: string[]) => void
   onAdd: () => void
 }
 
-function ContactSelector({ contacts, excludeIds, selectedIds, onSelectionChange, onAdd }: ContactSelectorProps) {
-  const availableContacts = contacts.filter((contact) => !excludeIds.includes(contact.id))
+function ContactSelector({ groups, excludeIds, selectedIds, onSelectionChange, onAdd }: ContactSelectorProps) {
+  const availableGroups = groups.filter((group) => !excludeIds.includes(group.id))
 
   return (
     <div className="space-y-4">
       <div className="border rounded-lg max-h-64 overflow-auto p-2 space-y-1">
-        {availableContacts.map((contact) => (
-          <label key={contact.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
+        {availableGroups.map((group) => (
+          <label key={group.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
             <Checkbox
-              checked={selectedIds.includes(contact.id)}
+              checked={selectedIds.includes(group.id)}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  onSelectionChange([...selectedIds, contact.id])
+                  onSelectionChange([...selectedIds, group.id])
                 } else {
-                  onSelectionChange(selectedIds.filter((id) => id !== contact.id))
+                  onSelectionChange(selectedIds.filter((id) => id !== group.id))
                 }
               }}
             />
-            <span className="flex-1">{contact.name}</span>
-            <span className="text-sm text-muted-foreground">{contact.phone}</span>
+            <span className="flex-1">{group.name}</span>
+            <span className="text-sm text-muted-foreground">{group.description}</span>
           </label>
         ))}
       </div>
@@ -495,7 +471,7 @@ function ContactSelector({ contacts, excludeIds, selectedIds, onSelectionChange,
           Clear Selection
         </Button>
         <Button onClick={onAdd} disabled={selectedIds.length === 0}>
-          Add {selectedIds.length} Contact{selectedIds.length !== 1 ? "s" : ""}
+          Add {selectedIds.length} Group{selectedIds.length !== 1 ? "s" : ""}
         </Button>
       </div>
     </div>

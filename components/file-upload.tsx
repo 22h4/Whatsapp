@@ -17,11 +17,10 @@ interface Contact {
 }
 
 interface FileUploadProps {
-  onContactsLoaded: (contacts: Contact[]) => void
-  onNotification: (type: 'success' | 'error', title: string, message: string) => void
+  onContactsUpdate: (contacts: Contact[]) => void
 }
 
-export default function FileUpload({ onContactsLoaded, onNotification }: FileUploadProps) {
+export default function FileUpload({ onContactsUpdate }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -95,25 +94,15 @@ export default function FileUpload({ onContactsLoaded, onNotification }: FileUpl
         throw new Error("No valid contacts found in file")
       }
 
-      onContactsLoaded(contacts)
+      onContactsUpdate(contacts)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-      onNotification({
-        type: "success",
-        title: "File Processed",
-        message: `Successfully loaded ${contacts.length} contacts`,
-      })
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process file")
-      onNotification({
-        type: "error",
-        title: "Processing Failed",
-        message: err instanceof Error ? err.message : "Failed to process file",
-      })
     } finally {
       setIsProcessing(false)
     }
-  }, [onContactsLoaded, onNotification])
+  }, [onContactsUpdate])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()

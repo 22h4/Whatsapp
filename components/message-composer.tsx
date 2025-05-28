@@ -20,18 +20,16 @@ interface Contact {
 }
 
 interface MessageComposerProps {
-  contacts: Contact[]
-  onNotification: (type: 'success' | 'error', title: string, message: string) => void
+  onMessageSent: (message: { content: string; attachments: File[] }) => void
 }
 
-export default function MessageComposer({ contacts, onNotification }: MessageComposerProps) {
+export default function MessageComposer({ onMessageSent }: MessageComposerProps) {
   const [message, setMessage] = useState("")
   const [attachments, setAttachments] = useState<File[]>([])
   const [previewContact, setPreviewContact] = useState<Contact | null>(null)
 
   const getAvailableVariables = () => {
-    if (contacts.length === 0) return []
-    return Object.keys(contacts[0]).filter((key) => key !== "id")
+    return ['name', 'phone', 'email', 'company', 'title']
   }
 
   const insertVariable = (variable: string) => {
@@ -69,6 +67,15 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
   const getFileIcon = (file: File) => {
     if (file.type.startsWith("image/")) return <ImageIcon className="h-4 w-4" />
     return <FileText className="h-4 w-4" />
+  }
+
+  const handleSend = () => {
+    onMessageSent({
+      content: message,
+      attachments,
+    })
+    setMessage("")
+    setAttachments([])
   }
 
   return (
@@ -162,50 +169,13 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
               <div>
                 <Label>Message Preview</Label>
                 <div className="mt-2">
-                  {contacts.length > 0 ? (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview Message
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Message Preview</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label>Select contact for preview:</Label>
-                            <select
-                              className="w-full mt-1 p-2 border rounded"
-                              onChange={(e) => {
-                                const contact = contacts.find((c) => c.id === e.target.value)
-                                setPreviewContact(contact || null)
-                              }}
-                            >
-                              <option value="">Choose a contact...</option>
-                              {contacts.slice(0, 10).map((contact) => (
-                                <option key={contact.id} value={contact.id}>
-                                  {contact.name} ({contact.phone})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {previewContact && (
-                            <div className="space-y-2">
-                              <Label>Preview for {previewContact.name}:</Label>
-                              <div className="p-4 border rounded bg-muted/50 whitespace-pre-wrap">
-                                {renderPreview(previewContact) || "Your message will appear here..."}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Upload contacts to preview messages</p>
+                  {previewContact && (
+                    <div className="space-y-2">
+                      <Label>Preview for {previewContact.name}:</Label>
+                      <div className="p-4 border rounded bg-muted/50 whitespace-pre-wrap">
+                        {renderPreview(previewContact) || "Your message will appear here..."}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -231,11 +201,6 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
                 size="sm"
                 onClick={() => {
                   setMessage("Hi {{name}}, your order {{order}} has been confirmed. Total: {{amount}}. Thank you!")
-                  onNotification({
-                    type: "info",
-                    title: "Template Applied",
-                    message: "Message template has been applied",
-                  })
                 }}
               >
                 Use Template
@@ -252,11 +217,6 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
                 size="sm"
                 onClick={() => {
                   setMessage("Hello {{name}}, this is a reminder about your appointment on {{date}} at {{time}}.")
-                  onNotification({
-                    type: "info",
-                    title: "Template Applied",
-                    message: "Message template has been applied",
-                  })
                 }}
               >
                 Use Template
@@ -273,11 +233,6 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
                 size="sm"
                 onClick={() => {
                   setMessage("Welcome to our service, {{name}}! We're excited to have you on board.")
-                  onNotification({
-                    type: "info",
-                    title: "Template Applied",
-                    message: "Message template has been applied",
-                  })
                 }}
               >
                 Use Template
@@ -297,17 +252,29 @@ export default function MessageComposer({ contacts, onNotification }: MessageCom
                   setMessage(
                     "Hi {{name}}, your payment of {{amount}} is due on {{due_date}}. Please pay to avoid late fees.",
                   )
-                  onNotification({
-                    type: "info",
-                    title: "Template Applied",
-                    message: "Message template has been applied",
-                  })
                 }}
               >
                 Use Template
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Send Message</CardTitle>
+          <CardDescription>Send your message to the selected contact</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSend}
+            disabled={!message || attachments.length === 0}
+          >
+            Send Message
+          </Button>
         </CardContent>
       </Card>
     </div>

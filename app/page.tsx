@@ -38,8 +38,6 @@ const defaultSettings: SettingsType = {
   theme: 'system',
   language: 'en',
   timezone: 'UTC',
-  emailNotifications: true,
-  pushNotifications: true,
   soundEnabled: true,
   defaultDelay: 2,
   maxRetries: 3,
@@ -117,18 +115,11 @@ export default function WhatsAppAutomationApp() {
   }
 
   const handleNotification = (type: 'success' | 'error', title: string, message: string) => {
-    if (type === 'error') {
-      toast({
-        title,
-        description: message,
-        variant: 'destructive',
-      })
-    } else {
-      toast({
-        title,
-        description: message,
-      })
-    }
+    toast({
+      title,
+      description: message,
+      variant: type === 'error' ? 'destructive' : 'default',
+    })
   }
 
   const handleSessionUpdate = (updates: Partial<WhatsAppSession>) => {
@@ -200,210 +191,35 @@ export default function WhatsAppAutomationApp() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DesktopSidebar />
-
-      {/* Mobile Header */}
-      <header className="md:hidden border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-2">
-            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <div className="flex items-center space-x-2 mb-6">
-                  <MessageSquare className="h-6 w-6 text-green-600" />
-                  <h1 className="text-lg font-bold">WhatsApp Auto</h1>
-                </div>
-                <nav className="space-y-2">
-                  {tabItems.slice(4).map((tab) => (
-                    <Button
-                      key={tab.id}
-                      variant={activeTab === tab.id ? "default" : "ghost"}
-                      onClick={() => {
-                        handleTabChange(tab.id)
-                        setIsMenuOpen(false)
-                      }}
-                      className="w-full justify-start"
-                    >
-                      <span className="mr-3">{tab.icon}</span>
-                      {tab.label}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      handleTabChange("settings")
-                      setIsMenuOpen(false)
-                    }}
-                    className="w-full justify-start"
-                  >
-                    <SettingsIcon className="mr-3 h-4 w-4" />
-                    Settings
-                  </Button>
-                </nav>
-              </SheetContent>
-            </Sheet>
-            <MessageSquare className="h-6 w-6 text-green-600" />
-            <h1 className="text-lg font-bold">WhatsApp Auto</h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
-              <div
-                className={`w-2 h-2 rounded-full ${session.type === 'business' && session.status === 'connected' ? "bg-green-500" : "bg-gray-300"}`}
-              />
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                {session.type === 'business' ? "Business" : session.type === 'web' ? "Web" : "Offline"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Desktop Header */}
-      <header className="hidden md:block md:ml-64 border-b">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold capitalize">
-                {activeTab.replace(/([A-Z])/g, " $1")}
-              </h2>
-              <p className="text-muted-foreground">
-                {activeTab === "upload" && "Upload and manage your contact lists"}
-                {activeTab === "contacts" && "View and edit your contacts"}
-                {activeTab === "groups" && "Organize contacts into groups"}
-                {activeTab === "compose" && "Create message templates"}
-                {activeTab === "integration" && "Connect to WhatsApp"}
-                {activeTab === "send" && "Send bulk messages"}
-                {activeTab === "history" && "View message history"}
-                {activeTab === "reports" && "Analytics and reports"}
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${session.type === 'business' && session.status === 'connected' ? "bg-green-500" : "bg-gray-300"}`}
-                />
-                <span className="text-sm text-muted-foreground">Business API</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${session.type === 'web' && session.status === 'connected' ? "bg-green-500" : "bg-gray-300"}`} />
-                <span className="text-sm text-muted-foreground">Web API</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className={`${isMobile ? "pb-20" : "md:ml-64"} p-4 md:p-6`}>
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contacts</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sent</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{stats.sent}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{stats.sent - stats.failed}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Queue</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{stats.pending}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tab Content */}
-        <div className="space-y-6">
-          {activeTab === "upload" && (
-            <FileUpload 
-              onContactsLoaded={(contacts) => setContacts(contacts as Contact[])} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+      {isMobile ? <MobileNavigation /> : <DesktopSidebar />}
+      <main className={`${isMobile ? 'pb-16' : 'md:pl-64'} min-h-screen`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {activeTab === 'upload' && (
+            <FileUpload onContactsUpdate={setContacts} />
           )}
-          {activeTab === "contacts" && (
-            <ContactList 
-              contacts={contacts} 
-              onContactsUpdate={(contacts) => setContacts(contacts as Contact[])} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+          {activeTab === 'contacts' && (
+            <ContactList contacts={contacts} onContactsUpdate={setContacts} />
           )}
-          {activeTab === "groups" && (
-            <ContactGroups 
-              contacts={contacts} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+          {activeTab === 'groups' && (
+            <ContactGroups groups={groups} onGroupsUpdate={setGroups} />
           )}
-          {activeTab === "compose" && (
-            <MessageComposer 
-              contacts={contacts} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+          {activeTab === 'compose' && (
+            <MessageComposer onMessageSent={(message) => setMessages([...messages, message])} />
           )}
-          {activeTab === "integration" && (
-            <WhatsAppIntegration
-              session={session}
-              onSessionUpdate={handleSessionUpdate}
-              onNotification={(type, title, message) => handleNotification(type, title, message)}
-            />
+          {activeTab === 'integration' && (
+            <WhatsAppIntegration session={session} onSessionUpdate={handleSessionUpdate} />
           )}
-          {activeTab === "send" && (
-            <div className="space-y-6">
-              <BulkSender 
-                contacts={contacts} 
-                session={session} 
-                onNotification={(type, title, message) => handleNotification(type, title, message)} 
-              />
-              <MessageScheduler 
-                contacts={contacts} 
-                onNotification={(type, title, message) => handleNotification(type, title, message)} 
-              />
-            </div>
+          {activeTab === 'send' && (
+            <BulkSender contacts={contacts} session={session} />
           )}
-          {activeTab === "history" && (
-            <MessageHistory 
-              messages={messages} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+          {activeTab === 'history' && (
+            <MessageHistory messages={messages} />
           )}
-          {activeTab === "reports" && <StatusReports messages={messages} />}
-          {activeTab === "settings" && (
-            <AppSettings 
-              settings={settings} 
-              onSettingsUpdate={setSettings} 
-              onNotification={(type, title, message) => handleNotification(type, title, message)} 
-            />
+          {activeTab === 'reports' && (
+            <StatusReports stats={stats} />
           )}
         </div>
       </main>
-
-      <MobileNavigation />
     </div>
   )
 }

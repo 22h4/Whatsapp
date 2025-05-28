@@ -33,8 +33,10 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   swcMinify: true,
-  // External packages that should be treated as server components
-  serverExternalPackages: ['whatsapp-web.js', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg']
+  // Use experimental.serverComponentsExternalPackages instead of serverExternalPackages
+  experimental: {
+    serverComponentsExternalPackages: ['whatsapp-web.js', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg']
+  }
 }
 
 module.exports = nextConfig 
