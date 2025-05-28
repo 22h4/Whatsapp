@@ -531,6 +531,8 @@ export interface WhatsAppSession {
     browser: string;
     version: string;
   };
+  type: 'web' | 'business';
+  status: 'connected' | 'disconnected';
 }
 
 // Template and Campaign types
@@ -756,4 +758,26 @@ export const clearSession = (): void => {
 };
 
 // Export storage keys
-export { STORAGE_KEYS }; 
+export { STORAGE_KEYS };
+
+// Export all data for backup/export
+export const exportData = async () => {
+  const database = await initDB();
+  const [contacts, groups, messages, settings, notifications, templates, campaigns] = await Promise.all([
+    database.getAll('contacts'),
+    database.getAll('groups'),
+    database.getAll('messages'),
+    database.getAll('settings'),
+    database.getAll('notifications'),
+    database.getAll('templates'),
+    database.getAll('campaigns'),
+  ]);
+  return { contacts, groups, messages, settings, notifications, templates, campaigns };
+};
+
+// Get unread notifications count
+export const getUnreadNotificationsCount = async (): Promise<number> => {
+  const database = await initDB();
+  const notifications = await database.getAll('notifications');
+  return notifications.filter(n => !n.read).length;
+}; 

@@ -19,7 +19,7 @@ interface WhatsAppSession {
 interface WhatsAppIntegrationProps {
   session: WhatsAppSession
   onSessionUpdate: (session: WhatsAppSession) => void
-  onNotification: (notification: any) => void
+  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
 export default function WhatsAppIntegration({ session, onSessionUpdate, onNotification }: WhatsAppIntegrationProps) {
@@ -48,30 +48,18 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
           setErrorDetails(null)
           setRetryCount(0)
           onSessionUpdate({ type: 'web', status: 'connected' })
-          onNotification({
-            type: 'success',
-            title: 'WhatsApp Web Connected',
-            message: 'Successfully connected to WhatsApp Web'
-          })
+          onNotification('success', 'WhatsApp Web Connected', 'Successfully connected to WhatsApp Web')
         } else if (data.status === 'error') {
           setWebStatus('error')
           setErrorDetails(data.error || 'Failed to connect to WhatsApp Web')
-          onNotification({
-            type: 'error',
-            title: 'Connection Error',
-            message: data.error || 'Failed to connect to WhatsApp Web'
-          })
+          onNotification('error', 'Connection Error', data.error || 'Failed to connect to WhatsApp Web')
         }
       } catch (error) {
         console.error('Error checking QR code:', error)
         setWebStatus('error')
         const errorMessage = error instanceof Error ? error.message : 'Failed to connect to WhatsApp Web'
         setErrorDetails(errorMessage)
-        onNotification({
-          type: 'error',
-          title: 'Connection Error',
-          message: errorMessage
-        })
+        onNotification('error', 'Connection Error', errorMessage)
       }
     }
 
@@ -87,21 +75,13 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
       setWebStatus('loading')
       setErrorDetails(null)
     } else {
-      onNotification({
-        type: 'error',
-        title: 'Max Retries Reached',
-        message: 'Please try again later or contact support'
-      })
+      onNotification('error', 'Max Retries Reached', 'Please try again later or contact support')
     }
   }
 
   const connectBusinessApi = async () => {
     if (!businessApiKey.trim() || !phoneNumberId.trim()) {
-      onNotification({
-        type: 'warning',
-        title: 'Missing Information',
-        message: 'Please provide both API key and Phone Number ID'
-      })
+      onNotification('warning', 'Missing Information', 'Please provide both API key and Phone Number ID')
       return
     }
 
@@ -109,18 +89,10 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
     try {
       // Implement business API connection logic here
       onSessionUpdate({ type: 'business', status: 'connected' })
-      onNotification({
-        type: 'success',
-        title: 'Business API Connected',
-        message: 'Successfully connected to WhatsApp Business API'
-      })
+      onNotification('success', 'Business API Connected', 'Successfully connected to WhatsApp Business API')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect to WhatsApp Business API'
-      onNotification({
-        type: 'error',
-        title: 'Connection Error',
-        message: errorMessage
-      })
+      onNotification('error', 'Connection Error', errorMessage)
     } finally {
       setIsConnecting(false)
     }
@@ -137,29 +109,17 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
           setWebStatus('loading')
           setErrorDetails(null)
           onSessionUpdate({ type: 'web', status: 'disconnected' })
-          onNotification({
-            type: 'info',
-            title: 'Disconnected',
-            message: 'WhatsApp Web disconnected successfully'
-          })
+          onNotification('info', 'Disconnected', 'WhatsApp Web disconnected successfully')
         } else {
           throw new Error(data.error || 'Failed to disconnect')
         }
       } else {
         onSessionUpdate({ type: 'business', status: 'disconnected' })
-        onNotification({
-          type: 'info',
-          title: 'Disconnected',
-          message: 'WhatsApp Business API disconnected'
-        })
+        onNotification('info', 'Disconnected', 'WhatsApp Business API disconnected')
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect from WhatsApp'
-      onNotification({
-        type: 'error',
-        title: 'Disconnection Error',
-        message: errorMessage
-      })
+      onNotification('error', 'Disconnection Error', errorMessage)
     }
   }
 

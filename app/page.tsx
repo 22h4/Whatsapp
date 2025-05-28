@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MessageSquare, Users, BarChart3, Calendar, Menu, Settings } from "lucide-react"
+import { MessageSquare, Users, BarChart3, Calendar, Menu, Settings as SettingsIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -15,29 +15,26 @@ import StatusReports from "@/components/status-reports"
 import MessageScheduler from "@/components/message-scheduler"
 import ContactGroups from "@/components/contact-groups"
 import MessageHistory from "@/components/message-history"
-import NotificationCenter from "@/components/notification-center"
 import AppSettings from "@/components/app-settings"
 import { useMobile } from "@/hooks/use-mobile"
 import {
   getContacts,
   getGroups,
   getMessages,
-  getNotifications,
   getSettings,
   getSession,
   getActiveTab,
   setActiveTab,
-  addNotification,
   updateSession,
   type Contact,
   type Group,
   type Message,
-  type Notification,
-  type Settings,
+  type Settings as SettingsType,
   type WhatsAppSession,
 } from "@/lib/storage"
 
-const defaultSettings: Settings = {
+const defaultSettings: SettingsType = {
+  id: 'default',
   theme: 'system',
   language: 'en',
   timezone: 'UTC',
@@ -53,6 +50,13 @@ const defaultSettings: Settings = {
 }
 
 const defaultSession: WhatsAppSession = {
+  isAuthenticated: false,
+  lastActive: new Date().toISOString(),
+  deviceInfo: {
+    platform: 'web',
+    browser: 'chrome',
+    version: '1.0.0',
+  },
   type: 'web',
   status: 'disconnected',
 }
@@ -61,8 +65,7 @@ export default function WhatsAppAutomationApp() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [groups, setGroups] = useState<Group[]>([])
   const [messages, setMessages] = useState<Message[]>([])
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [settings, setSettings] = useState<Settings>(defaultSettings)
+  const [settings, setSettings] = useState<SettingsType>(defaultSettings)
   const [session, setSession] = useState<WhatsAppSession>(defaultSession)
   const [activeTab, setActiveTabState] = useState('upload')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -72,15 +75,33 @@ export default function WhatsAppAutomationApp() {
 
   // Load data from localStorage on mount
   useEffect(() => {
-    setIsClient(true)
-    setContacts(getContacts())
-    setGroups(getGroups())
-    setMessages(getMessages())
-    setNotifications(getNotifications())
-    setSettings(getSettings())
-    setSession(getSession())
-    setActiveTabState(getActiveTab())
-  }, [])
+    const loadData = async () => {
+      setIsClient(true)
+      try {
+        const [loadedContacts, loadedGroups, loadedMessages, loadedSettings, loadedSession] = await Promise.all([
+          getContacts(),
+          getGroups(),
+          getMessages(),
+          getSettings(),
+          getSession(),
+        ])
+        setContacts(loadedContacts)
+        setGroups(loadedGroups)
+        setMessages(loadedMessages)
+        setSettings(loadedSettings)
+        setSession(loadedSession)
+        setActiveTabState(getActiveTab())
+      } catch (error) {
+        console.error('Failed to load data:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load application data',
+          variant: 'destructive',
+        })
+      }
+    }
+    loadData()
+  }, [toast])
 
   // Update active tab in localStorage when it changes
   const handleTabChange = (tab: string) => {
@@ -95,26 +116,24 @@ export default function WhatsAppAutomationApp() {
     pending: messages.filter(m => m.status === 'pending').length,
   }
 
-  const handleNotification = (notification: Omit<Notification, 'id' | 'createdAt'>) => {
-    const newNotification = addNotification(notification)
-    setNotifications(prev => [newNotification, ...prev.slice(0, 49)])
-
-    if (notification.type === 'error') {
+  const handleNotification = (type: 'success' | 'error', title: string, message: string) => {
+    if (type === 'error') {
       toast({
-        title: notification.title,
-        description: notification.message,
+        title,
+        description: message,
         variant: 'destructive',
       })
-    } else if (notification.type === 'success') {
+    } else {
       toast({
-        title: notification.title,
-        description: notification.message,
+        title,
+        description: message,
       })
     }
   }
 
   const handleSessionUpdate = (updates: Partial<WhatsAppSession>) => {
-    const newSession = updateSession(updates)
+    const newSession = { ...session, ...updates }
+    updateSession(newSession)
     setSession(newSession)
   }
 
@@ -221,7 +240,7 @@ export default function WhatsAppAutomationApp() {
                     }}
                     className="w-full justify-start"
                   >
-                    <Settings className="mr-3 h-4 w-4" />
+                    <SettingsIcon className="mr-3 h-4 w-4" />
                     Settings
                   </Button>
                 </nav>
@@ -231,7 +250,6 @@ export default function WhatsAppAutomationApp() {
             <h1 className="text-lg font-bold">WhatsApp Auto</h1>
           </div>
           <div className="flex items-center space-x-2">
-            <NotificationCenter notifications={notifications} onClearAll={() => setNotifications([])} />
             <div className="flex items-center space-x-1">
               <div
                 className={`w-2 h-2 rounded-full ${session.type === 'business' && session.status === 'connected' ? "bg-green-500" : "bg-gray-300"}`}
@@ -264,7 +282,6 @@ export default function WhatsAppAutomationApp() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <NotificationCenter notifications={notifications} onClearAll={() => setNotifications([])} />
               <div className="flex items-center space-x-2">
                 <div
                   className={`w-2 h-2 rounded-full ${session.type === 'business' && session.status === 'connected' ? "bg-green-500" : "bg-gray-300"}`}
@@ -324,28 +341,65 @@ export default function WhatsAppAutomationApp() {
 
         {/* Tab Content */}
         <div className="space-y-6">
-          {activeTab === "upload" && <FileUpload onContactsLoaded={setContacts} onNotification={handleNotification} />}
-          {activeTab === "contacts" && (
-            <ContactList contacts={contacts} onContactsUpdate={setContacts} onNotification={handleNotification} />
+          {activeTab === "upload" && (
+            <FileUpload 
+              onContactsLoaded={(contacts) => setContacts(contacts as Contact[])} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
           )}
-          {activeTab === "groups" && <ContactGroups contacts={contacts} onNotification={handleNotification} />}
-          {activeTab === "compose" && <MessageComposer contacts={contacts} onNotification={handleNotification} />}
+          {activeTab === "contacts" && (
+            <ContactList 
+              contacts={contacts} 
+              onContactsUpdate={(contacts) => setContacts(contacts as Contact[])} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
+          )}
+          {activeTab === "groups" && (
+            <ContactGroups 
+              contacts={contacts} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
+          )}
+          {activeTab === "compose" && (
+            <MessageComposer 
+              contacts={contacts} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
+          )}
           {activeTab === "integration" && (
             <WhatsAppIntegration
               session={session}
               onSessionUpdate={handleSessionUpdate}
-              onNotification={handleNotification}
+              onNotification={(type, title, message) => handleNotification(type, title, message)}
             />
           )}
           {activeTab === "send" && (
             <div className="space-y-6">
-              <BulkSender contacts={contacts} session={session} onNotification={handleNotification} />
-              <MessageScheduler contacts={contacts} onNotification={handleNotification} />
+              <BulkSender 
+                contacts={contacts} 
+                session={session} 
+                onNotification={(type, title, message) => handleNotification(type, title, message)} 
+              />
+              <MessageScheduler 
+                contacts={contacts} 
+                onNotification={(type, title, message) => handleNotification(type, title, message)} 
+              />
             </div>
           )}
-          {activeTab === "history" && <MessageHistory messages={messages} onNotification={handleNotification} />}
+          {activeTab === "history" && (
+            <MessageHistory 
+              messages={messages} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
+          )}
           {activeTab === "reports" && <StatusReports messages={messages} />}
-          {activeTab === "settings" && <AppSettings settings={settings} onSettingsUpdate={setSettings} onNotification={handleNotification} />}
+          {activeTab === "settings" && (
+            <AppSettings 
+              settings={settings} 
+              onSettingsUpdate={setSettings} 
+              onNotification={(type, title, message) => handleNotification(type, title, message)} 
+            />
+          )}
         </div>
       </main>
 

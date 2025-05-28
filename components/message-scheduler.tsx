@@ -32,7 +32,7 @@ interface ScheduledMessage {
 
 interface MessageSchedulerProps {
   contacts: Contact[]
-  onNotification: (notification: any) => void
+  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
 export default function MessageScheduler({ contacts, onNotification }: MessageSchedulerProps) {

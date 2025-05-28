@@ -18,7 +18,7 @@ interface Contact {
 
 interface FileUploadProps {
   onContactsLoaded: (contacts: Contact[]) => void
-  onNotification: (notification: any) => void
+  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
 export default function FileUpload({ onContactsLoaded, onNotification }: FileUploadProps) {

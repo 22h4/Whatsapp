@@ -21,7 +21,7 @@ interface Contact {
 
 interface MessageComposerProps {
   contacts: Contact[]
-  onNotification: (notification: any) => void
+  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
 export default function MessageComposer({ contacts, onNotification }: MessageComposerProps) {

@@ -32,7 +32,7 @@ interface ContactGroup {
 
 interface ContactGroupsProps {
   contacts: Contact[]
-  onNotification: (notification: any) => void
+  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
 export default function ContactGroups({ contacts, onNotification }: ContactGroupsProps) {
