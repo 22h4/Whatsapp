@@ -8,16 +8,11 @@ import { getCampaigns } from "@/lib/storage"
 import type { Campaign, Message } from "@/lib/storage"
 
 interface AnalyticsProps {
-  onNotification: (notification: any) => void;
   campaigns: Campaign[];
   messages: Message[];
 }
 
-export default function Analytics({
-  onNotification,
-  campaigns,
-  messages,
-}: AnalyticsProps) {
+export default function Analytics({ campaigns, messages }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState("7d")
 
   const calculateMetrics = () => {

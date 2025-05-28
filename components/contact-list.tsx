@@ -25,7 +25,6 @@ import { toast } from 'react-hot-toast'
 interface ContactListProps {
   contacts: Contact[]
   onContactsUpdate: (contacts: Contact[]) => void
-  onNotification: (notification: { type: string; title: string; message: string }) => void
   onContactSelect?: (contact: Contact) => void
 }
 
@@ -40,7 +39,7 @@ interface ContactFormData {
   [key: string]: string | undefined
 }
 
-export default function ContactList({ contacts, onContactsUpdate, onNotification, onContactSelect }: ContactListProps) {
+export default function ContactList({ contacts, onContactsUpdate, onContactSelect }: ContactListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined)
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false)
@@ -64,11 +63,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
       onContactsUpdate(contacts.filter((contact) => contact.id !== id))
       toast.success('Contact deleted successfully')
     } catch (error: any) {
-      onNotification({
-        type: "error",
-        title: "Error",
-        message: `Failed to delete contact: ${error.message}`,
-      })
+      // No notification logic needed
     }
   }
 
@@ -103,11 +98,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
       })
       toast.success('Contact added successfully')
     } catch (error: any) {
-      onNotification({
-        type: "error",
-        title: "Error",
-        message: `Failed to add contact: ${error.message}`,
-      })
+      // No notification logic needed
     }
   }
 
@@ -130,11 +121,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
       })
       toast.success('Contact updated successfully')
     } catch (error: any) {
-      onNotification({
-        type: "error",
-        title: "Error",
-        message: `Failed to update contact: ${error.message}`,
-      })
+      // No notification logic needed
     }
   }
 
@@ -152,11 +139,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
       URL.revokeObjectURL(url)
       toast.success('Contacts exported successfully')
     } catch (error: any) {
-      onNotification({
-        type: "error",
-        title: "Error",
-        message: `Failed to export contacts: ${error.message}`,
-      })
+      // No notification logic needed
     }
   }
 
@@ -229,11 +212,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
         toast.success(`Imported ${importedContacts.length} contacts successfully`)
       }
     } catch (error: any) {
-      onNotification({
-        type: "error",
-        title: "Error",
-        message: `Failed to import contacts: ${error.message}`,
-      })
+      // No notification logic needed
     }
   }
 
@@ -245,7 +224,7 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
   return (
     <div className="space-y-6">
       {/* Google Contacts Sync */}
-      <GoogleContactsSync contacts={contacts} onContactsUpdate={onContactsUpdate} onNotification={onNotification} />
+      <GoogleContactsSync contacts={contacts} onContactsUpdate={onContactsUpdate} />
 
       <Card>
         <CardHeader>
@@ -259,7 +238,6 @@ export default function ContactList({ contacts, onContactsUpdate, onNotification
                 onContactsImported={(newContacts) => {
                   onContactsUpdate([...contacts, ...newContacts])
                 }}
-                onNotification={onNotification}
               />
               <Button variant="outline" onClick={handleExportContacts} disabled={contacts.length === 0}>
                 <Download className="h-4 w-4 mr-2" />

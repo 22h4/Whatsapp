@@ -15,11 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { MessageTemplate } from "@/lib/storage"
 import { getTemplates, addTemplate, updateTemplate, deleteTemplate } from "@/lib/storage"
 
-interface MessageTemplatesProps {
-  onNotification: (notification: any) => void
-}
+interface MessageTemplatesProps {}
 
-export default function MessageTemplates({ onNotification }: MessageTemplatesProps) {
+export default function MessageTemplates({}: MessageTemplatesProps) {
   const [templates, setTemplates] = useState<MessageTemplate[]>(getTemplates())
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -29,32 +27,17 @@ export default function MessageTemplates({ onNotification }: MessageTemplatesPro
     const newTemplate = addTemplate(template)
     setTemplates([...templates, newTemplate])
     setIsAddDialogOpen(false)
-    onNotification({
-      type: "success",
-      title: "Template Added",
-      message: "Message template created successfully",
-    })
   }
 
   const handleEditTemplate = (template: MessageTemplate) => {
     const updatedTemplate = updateTemplate(template.id, template)
     setTemplates(templates.map(t => t.id === template.id ? updatedTemplate : t))
     setEditingTemplate(null)
-    onNotification({
-      type: "success",
-      title: "Template Updated",
-      message: "Message template updated successfully",
-    })
   }
 
   const handleDeleteTemplate = (id: string) => {
     deleteTemplate(id)
     setTemplates(templates.filter(t => t.id !== id))
-    onNotification({
-      type: "success",
-      title: "Template Deleted",
-      message: "Message template deleted successfully",
-    })
   }
 
   const getStatusBadge = (status: MessageTemplate['status']) => {
@@ -109,10 +92,9 @@ export default function MessageTemplates({ onNotification }: MessageTemplatesPro
         </CardHeader>
         <CardContent>
           <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as MessageTemplate['category'])}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
               <TabsTrigger value="support">Support</TabsTrigger>
-              <TabsTrigger value="notification">Notifications</TabsTrigger>
               <TabsTrigger value="custom">Custom</TabsTrigger>
             </TabsList>
 

@@ -10,9 +10,10 @@ import {
   BarChart2,
   Settings,
   Zap,
-  Bell,
   LayoutDashboard,
+  LineChart,
 } from "lucide-react"
+import { TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface SidebarProps {
   activePage: string
@@ -74,27 +75,45 @@ export function Sidebar({ activePage, onPageChange }: SidebarProps) {
         <h2 className="text-lg font-semibold">WhatsApp Automation</h2>
       </div>
       <nav className="flex-1 space-y-1 p-2">
-        {navigation.map((item) => (
-          <Button
-            key={item.page}
-            variant={activePage === item.page ? "secondary" : "ghost"}
-            className={cn(
-              "w-full justify-start",
-              activePage === item.page && "bg-secondary"
-            )}
-            onClick={() => onPageChange(item.page)}
-          >
-            <item.icon className="mr-2 h-4 w-4" />
-            {item.name}
-          </Button>
-        ))}
+        <TabsList className="grid w-full grid-cols-1">
+          <TabsTrigger value="dashboard" className="flex items-center space-x-2">
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Dashboard</span>
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Contacts</span>
+          </TabsTrigger>
+          <TabsTrigger value="integration" className="flex items-center space-x-2">
+            <MessageSquare className="h-4 w-4" />
+            <span>Integration</span>
+          </TabsTrigger>
+          <TabsTrigger value="bulk-sender" className="flex items-center space-x-2">
+            <Send className="h-4 w-4" />
+            <span>Bulk Sender</span>
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center space-x-2">
+            <FileText className="h-4 w-4" />
+            <span>Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="campaigns" className="flex items-center space-x-2">
+            <BarChart2 className="h-4 w-4" />
+            <span>Campaigns</span>
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center space-x-2">
+            <LineChart className="h-4 w-4" />
+            <span>Analytics</span>
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="flex items-center space-x-2">
+            <Zap className="h-4 w-4" />
+            <span>Automation</span>
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
+          </TabsTrigger>
+        </TabsList>
       </nav>
-      <div className="border-t p-4">
-        <Button variant="ghost" className="w-full justify-start">
-          <Bell className="mr-2 h-4 w-4" />
-          Notifications
-        </Button>
-      </div>
     </div>
   )
 } 

@@ -14,23 +14,13 @@ import type { Settings } from "@/lib/storage"
 import { updateSettings, exportData, importData } from "@/lib/storage"
 
 interface SettingsProps {
-  onNotification: (notification: any) => void;
   settings: Settings;
   onSettingsUpdate: (updates: Partial<Settings>) => void;
 }
 
-export default function Settings({
-  onNotification,
-  settings,
-  onSettingsUpdate,
-}: SettingsProps) {
+export default function Settings({ settings, onSettingsUpdate }: SettingsProps) {
   const handleSettingChange = (key: keyof Settings, value: any) => {
     onSettingsUpdate({ [key]: value });
-    onNotification({
-      type: "success",
-      title: "Settings Updated",
-      message: "Your settings have been saved successfully",
-    });
   };
 
   const handleExportData = () => {
@@ -45,17 +35,8 @@ export default function Settings({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      onNotification({
-        type: "success",
-        title: "Data Exported",
-        message: "Your data has been exported successfully",
-      });
     } catch (error: any) {
-      onNotification({
-        type: 'error',
-        title: 'Error',
-        message: `Failed to export data: ${error.message}`,
-      });
+      console.error('Failed to export data:', error.message);
     }
   };
 
@@ -69,17 +50,8 @@ export default function Settings({
         const json = e.target?.result as string;
         importData(json);
         // Assuming importData updates the local storage, we might need to trigger a reload of data in app/layout.tsx
-        onNotification({
-          type: "success",
-          title: "Data Imported",
-          message: "Your data has been imported successfully",
-        });
       } catch (error: any) {
-        onNotification({
-          type: 'error',
-          title: 'Error',
-          message: `Failed to import data: ${error.message}`,
-        });
+        console.error('Failed to import data:', error.message);
       }
     };
     reader.readAsText(file);
@@ -142,19 +114,6 @@ export default function Settings({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable or disable notifications
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.pushNotifications}
-                  onCheckedChange={(checked) => handleSettingChange("pushNotifications", checked)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
                   <Label>Sound</Label>
                   <p className="text-sm text-muted-foreground">
                     Enable or disable sound effects
@@ -197,19 +156,6 @@ export default function Settings({
                     <SelectItem value="365">1 year</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Enable or disable email notifications
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.emailNotifications}
-                  onCheckedChange={(checked) => handleSettingChange("emailNotifications", checked)}
-                />
               </div>
 
               <div className="flex items-center justify-between">

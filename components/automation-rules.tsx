@@ -47,11 +47,9 @@ interface AutomationRule {
   updatedAt: string
 }
 
-interface AutomationRulesProps {
-  onNotification: (notification: any) => void
-}
+interface AutomationRulesProps {}
 
-export default function AutomationRules({ onNotification }: AutomationRulesProps) {
+export default function AutomationRules({}: AutomationRulesProps) {
   const [rules, setRules] = useState<AutomationRule[]>([])
   const [editingRule, setEditingRule] = useState<AutomationRule | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -65,15 +63,10 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
         setTemplates(loadedTemplates);
       } catch (error) {
         console.error('Failed to load templates:', error);
-        onNotification({
-          type: "error",
-          title: "Error",
-          message: "Failed to load message templates",
-        });
       }
     };
     loadTemplates();
-  }, [onNotification]);
+  }, []);
 
   const handleAddRule = (rule: Omit<AutomationRule, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newRule: AutomationRule = {
@@ -84,11 +77,6 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
     }
     setRules([...rules, newRule])
     setIsAddDialogOpen(false)
-    onNotification({
-      type: "success",
-      title: "Rule Added",
-      message: "Automation rule created successfully",
-    })
   }
 
   const handleEditRule = (rule: AutomationRule) => {
@@ -98,20 +86,10 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
     }
     setRules(rules.map(r => r.id === rule.id ? updatedRule : r))
     setEditingRule(null)
-    onNotification({
-      type: "success",
-      title: "Rule Updated",
-      message: "Automation rule updated successfully",
-    })
   }
 
   const handleDeleteRule = (id: string) => {
     setRules(rules.filter(r => r.id !== id))
-    onNotification({
-      type: "success",
-      title: "Rule Deleted",
-      message: "Automation rule deleted successfully",
-    })
   }
 
   const handleToggleStatus = (id: string, status: AutomationRule['status']) => {
@@ -121,11 +99,6 @@ export default function AutomationRules({ onNotification }: AutomationRulesProps
       updatedAt: new Date().toISOString(),
     }
     setRules(rules.map(r => r.id === id ? updatedRule : r))
-    onNotification({
-      type: "success",
-      title: "Rule Status Updated",
-      message: `Rule ${status === 'active' ? 'activated' : 'deactivated'} successfully`,
-    })
   }
 
   const getStatusBadge = (status: AutomationRule['status']) => {

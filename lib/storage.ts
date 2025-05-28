@@ -49,8 +49,6 @@ interface WhatsAppDBSchema extends DBSchema {
       theme: 'light' | 'dark' | 'system';
       language: string;
       timezone: string;
-      emailNotifications: boolean;
-      pushNotifications: boolean;
       soundEnabled: boolean;
       defaultDelay: number;
       maxRetries: number;
@@ -58,6 +56,8 @@ interface WhatsAppDBSchema extends DBSchema {
       dataRetention: number;
       analyticsEnabled: boolean;
       crashReporting: boolean;
+      webhookUrl?: string;
+      apiKey?: string;
     };
   };
   notifications: {
@@ -157,9 +157,6 @@ const initDB = async () => {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'id' });
-      }
-      if (!db.objectStoreNames.contains('notifications')) {
-        db.createObjectStore('notifications', { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains('templates')) {
         db.createObjectStore('templates', { keyPath: 'id' });
@@ -333,10 +330,8 @@ export const getSettings = async (): Promise<Settings> => {
         theme: 'system',
         language: 'en',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        emailNotifications: true,
-        pushNotifications: true,
         soundEnabled: true,
-        defaultDelay: 0,
+        defaultDelay: 2,
         maxRetries: 3,
         autoBackup: true,
         dataRetention: 30,
@@ -761,18 +756,32 @@ export const clearSession = (): void => {
 export { STORAGE_KEYS };
 
 // Export all data for backup/export
-export const exportData = async () => {
-  const database = await initDB();
-  const [contacts, groups, messages, settings, notifications, templates, campaigns] = await Promise.all([
-    database.getAll('contacts'),
-    database.getAll('groups'),
-    database.getAll('messages'),
-    database.getAll('settings'),
-    database.getAll('notifications'),
-    database.getAll('templates'),
-    database.getAll('campaigns'),
-  ]);
-  return { contacts, groups, messages, settings, notifications, templates, campaigns };
+export const exportData = async (): Promise<string> => {
+  try {
+    const database = await initDB();
+    const [contacts, groups, messages, settings, templates, campaigns] = await Promise.all([
+      database.getAll('contacts'),
+      database.getAll('groups'),
+      database.getAll('messages'),
+      database.getAll('settings'),
+      database.getAll('templates'),
+      database.getAll('campaigns'),
+    ]);
+
+    const data = {
+      contacts,
+      groups,
+      messages,
+      settings,
+      templates,
+      campaigns,
+    };
+
+    return JSON.stringify(data, null, 2);
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    throw new Error('Failed to export data');
+  }
 };
 
 // Get unread notifications count

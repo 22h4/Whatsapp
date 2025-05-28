@@ -19,10 +19,9 @@ interface WhatsAppSession {
 interface WhatsAppIntegrationProps {
   session: WhatsAppSession
   onSessionUpdate: (session: WhatsAppSession) => void
-  onNotification: (type: 'success' | 'error', title: string, message: string) => void
 }
 
-export default function WhatsAppIntegration({ session, onSessionUpdate, onNotification }: WhatsAppIntegrationProps) {
+export default function WhatsAppIntegration({ session, onSessionUpdate }: WhatsAppIntegrationProps) {
   const [businessApiKey, setBusinessApiKey] = useState("")
   const [phoneNumberId, setPhoneNumberId] = useState("")
   const [isConnecting, setIsConnecting] = useState(false)
@@ -48,18 +47,15 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
           setErrorDetails(null)
           setRetryCount(0)
           onSessionUpdate({ type: 'web', status: 'connected' })
-          onNotification('success', 'WhatsApp Web Connected', 'Successfully connected to WhatsApp Web')
         } else if (data.status === 'error') {
           setWebStatus('error')
           setErrorDetails(data.error || 'Failed to connect to WhatsApp Web')
-          onNotification('error', 'Connection Error', data.error || 'Failed to connect to WhatsApp Web')
         }
       } catch (error) {
         console.error('Error checking QR code:', error)
         setWebStatus('error')
         const errorMessage = error instanceof Error ? error.message : 'Failed to connect to WhatsApp Web'
         setErrorDetails(errorMessage)
-        onNotification('error', 'Connection Error', errorMessage)
       }
     }
 
@@ -67,21 +63,18 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
     checkQRCode()
 
     return () => clearInterval(interval)
-  }, [onSessionUpdate, onNotification])
+  }, [onSessionUpdate])
 
   const handleRetry = () => {
     if (retryCount < MAX_RETRIES) {
       setRetryCount(prev => prev + 1)
       setWebStatus('loading')
       setErrorDetails(null)
-    } else {
-      onNotification('error', 'Max Retries Reached', 'Please try again later or contact support')
     }
   }
 
   const connectBusinessApi = async () => {
     if (!businessApiKey.trim() || !phoneNumberId.trim()) {
-      onNotification('warning', 'Missing Information', 'Please provide both API key and Phone Number ID')
       return
     }
 
@@ -89,10 +82,8 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
     try {
       // Implement business API connection logic here
       onSessionUpdate({ type: 'business', status: 'connected' })
-      onNotification('success', 'Business API Connected', 'Successfully connected to WhatsApp Business API')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect to WhatsApp Business API'
-      onNotification('error', 'Connection Error', errorMessage)
     } finally {
       setIsConnecting(false)
     }
@@ -109,17 +100,14 @@ export default function WhatsAppIntegration({ session, onSessionUpdate, onNotifi
           setWebStatus('loading')
           setErrorDetails(null)
           onSessionUpdate({ type: 'web', status: 'disconnected' })
-          onNotification('info', 'Disconnected', 'WhatsApp Web disconnected successfully')
         } else {
           throw new Error(data.error || 'Failed to disconnect')
         }
       } else {
         onSessionUpdate({ type: 'business', status: 'disconnected' })
-        onNotification('info', 'Disconnected', 'WhatsApp Business API disconnected')
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect from WhatsApp'
-      onNotification('error', 'Disconnection Error', errorMessage)
     }
   }
 

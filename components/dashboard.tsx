@@ -5,21 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Users, MessageSquare, Send, FileText, BarChart2, Zap } from "lucide-react"
 import { getContacts, getTemplates, getCampaigns } from "@/lib/storage"
-import type { Contact, WhatsAppSession, Notification, Campaign, MessageTemplate } from "@/lib/storage"
+import type { Contact, WhatsAppSession, Campaign, MessageTemplate } from "@/lib/storage"
 
 interface DashboardProps {
-  onNotification: (notification: any) => void;
   contacts: Contact[];
   session: WhatsAppSession;
-  notifications: Notification[];
 }
 
-export default function Dashboard({
-  onNotification,
-  contacts,
-  session,
-  notifications,
-}: DashboardProps) {
+export default function Dashboard({ contacts, session }: DashboardProps) {
   const templates = getTemplates()
   const campaigns = getCampaigns()
 

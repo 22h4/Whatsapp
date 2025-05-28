@@ -16,11 +16,9 @@ import { Progress } from "@/components/ui/progress"
 import type { Campaign, MessageTemplate, Group } from "@/lib/storage"
 import { getCampaigns, addCampaign, updateCampaign, deleteCampaign, getTemplates, getGroups } from "@/lib/storage"
 
-interface CampaignManagerProps {
-  onNotification: (notification: any) => void
-}
+interface CampaignManagerProps {}
 
-export default function CampaignManager({ onNotification }: CampaignManagerProps) {
+export default function CampaignManager({}: CampaignManagerProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>(getCampaigns())
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
@@ -30,42 +28,22 @@ export default function CampaignManager({ onNotification }: CampaignManagerProps
     const newCampaign = addCampaign(campaign)
     setCampaigns([...campaigns, newCampaign])
     setIsAddDialogOpen(false)
-    onNotification({
-      type: "success",
-      title: "Campaign Added",
-      message: "Campaign created successfully",
-    })
   }
 
   const handleEditCampaign = (campaign: Campaign) => {
     const updatedCampaign = updateCampaign(campaign.id, campaign)
     setCampaigns(campaigns.map(c => c.id === campaign.id ? updatedCampaign : c))
     setEditingCampaign(null)
-    onNotification({
-      type: "success",
-      title: "Campaign Updated",
-      message: "Campaign updated successfully",
-    })
   }
 
   const handleDeleteCampaign = (id: string) => {
     deleteCampaign(id)
     setCampaigns(campaigns.filter(c => c.id !== id))
-    onNotification({
-      type: "success",
-      title: "Campaign Deleted",
-      message: "Campaign deleted successfully",
-    })
   }
 
   const handleStatusChange = (id: string, status: Campaign['status']) => {
     const updatedCampaign = updateCampaign(id, { status })
     setCampaigns(campaigns.map(c => c.id === id ? updatedCampaign : c))
-    onNotification({
-      type: "success",
-      title: "Campaign Status Updated",
-      message: `Campaign status changed to ${status}`,
-    })
   }
 
   const getStatusBadge = (status: Campaign['status']) => {

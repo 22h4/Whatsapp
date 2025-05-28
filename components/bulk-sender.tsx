@@ -14,10 +14,9 @@ import type { Contact, WhatsAppSession } from "@/lib/storage"
 interface BulkSenderProps {
   contacts: Contact[]
   session: WhatsAppSession
-  onNotification: (notification: any) => void
 }
 
-export default function BulkSender({ contacts, session, onNotification }: BulkSenderProps) {
+export default function BulkSender({ contacts, session }: BulkSenderProps) {
   const [messageContent, setMessageContent] = useState("")
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
@@ -37,29 +36,14 @@ export default function BulkSender({ contacts, session, onNotification }: BulkSe
 
   const handleSendMessage = async () => {
     if (!session || session.status !== "connected") {
-      onNotification({
-        type: 'error',
-        title: 'Not Connected',
-        message: 'Please connect to WhatsApp to send messages.',
-      })
       return
     }
 
     if (!messageContent.trim()) {
-      onNotification({
-        type: 'error',
-        title: 'Empty Message',
-        message: 'Message content cannot be empty.',
-      })
       return
     }
 
     if (contacts.length === 0) {
-      onNotification({
-        type: 'error',
-        title: 'No Contacts',
-        message: 'Please add contacts before sending messages.',
-      })
       return
     }
 
@@ -99,11 +83,6 @@ export default function BulkSender({ contacts, session, onNotification }: BulkSe
             const errorMessage = data.error || 'Failed to send message'
             setFailedMessages(prev => [...prev, { contact, error: errorMessage }])
             setRetryQueue(prev => [...prev, { contact, message: content }])
-            onNotification({
-              type: 'error',
-              title: 'Message Failed',
-              message: `Failed to send message to ${contact.name}: ${errorMessage}`,
-            })
             return { contact, status: 'failed', error: errorMessage }
           }
         } catch (error) {
@@ -111,11 +90,6 @@ export default function BulkSender({ contacts, session, onNotification }: BulkSe
           const errorMessage = error instanceof Error ? error.message : 'Network error'
           setFailedMessages(prev => [...prev, { contact, error: errorMessage }])
           setRetryQueue(prev => [...prev, { contact, message: messageContent }])
-          onNotification({
-            type: 'error',
-            title: 'Message Failed',
-            message: `Failed to send message to ${contact.name}: ${errorMessage}`,
-          })
           return { contact, status: 'failed', error: errorMessage }
         }
       })
@@ -163,21 +137,11 @@ export default function BulkSender({ contacts, session, onNotification }: BulkSe
           const errorMessage = data.error || 'Failed to send message'
           setFailedMessages(prev => [...prev, { contact, error: errorMessage }])
           setRetryQueue(prev => [...prev, { contact, message }])
-          onNotification({
-            type: 'error',
-            title: 'Retry Failed',
-            message: `Failed to send message to ${contact.name}: ${errorMessage}`,
-          })
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Network error'
         setFailedMessages(prev => [...prev, { contact, error: errorMessage }])
         setRetryQueue(prev => [...prev, { contact, message }])
-        onNotification({
-          type: 'error',
-          title: 'Retry Failed',
-          message: `Failed to send message to ${contact.name}: ${errorMessage}`,
-        })
       }
 
       // Add delay between retries

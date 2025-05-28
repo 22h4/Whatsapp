@@ -1,10 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Toaster } from "@/components/ui/toaster"
-import { useToast } from "@/components/ui/use-toast"
 import { Sidebar } from "@/components/sidebar"
-import { Notifications } from "@/components/notifications"
 import ContactList from "@/components/contact-list"
 import WhatsAppIntegration from "@/components/whatsapp-integration"
 import BulkSender from "@/components/bulk-sender"
@@ -14,18 +11,28 @@ import Analytics from "@/components/analytics"
 import AutomationRules from "@/components/automation-rules"
 import Settings from "@/components/settings"
 import Dashboard from "@/components/dashboard"
-import { getContacts, getSession, updateSession, getNotifications, getSettings, updateSettings } from "@/lib/storage"
-import type { Contact, WhatsAppSession, Notification, Settings as SettingsType } from "@/lib/storage"
+import { getContacts, getSession, updateSession, getSettings, updateSettings } from "@/lib/storage"
+import type { Contact, WhatsAppSession, Settings as SettingsType } from "@/lib/storage"
 import { Inter } from "next/font/google"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [activePage, setActivePage] = useState("dashboard")
-  const [notifications, setNotifications] = useState<Notification[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [session, setSession] = useState<WhatsAppSession>({ type: 'web', status: 'disconnected' })
+  const [session, setSession] = useState<WhatsAppSession>({
+    isAuthenticated: false,
+    type: 'web',
+    status: 'disconnected',
+    lastActive: new Date().toISOString(),
+    deviceInfo: {
+      platform: 'web',
+      browser: 'chrome',
+      version: '1.0.0'
+    }
+  })
   const [settings, setSettings] = useState<SettingsType>({
+    id: 'default',
     theme: 'system',
     language: 'en',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -46,16 +53,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [loadedContacts, loadedSession, loadedNotifications, loadedSettings] = await Promise.all([
+        const [loadedContacts, loadedSession, loadedSettings] = await Promise.all([
           getContacts(),
           getSession(),
-          getNotifications(),
           getSettings()
         ]);
         
         setContacts(loadedContacts);
         setSession(loadedSession);
-        setNotifications(loadedNotifications);
         setSettings(loadedSettings);
         setIsClient(true);
       } catch (error) {
@@ -68,56 +73,27 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     loadData();
   }, []);
 
-  const { toast } = useToast();
-
-  const handleNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
-    try {
-      const newNotification = await addNotification(notification);
-      setNotifications(prev => [newNotification, ...prev]);
-      toast({
-        title: notification.title,
-        description: notification.message,
-        variant: notification.type,
-      });
-    } catch (error) {
-      console.error('Failed to add notification:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add notification',
-        variant: 'error',
-      });
-    }
-  };
-
   const handleContactsUpdate = (updatedContacts: Contact[]) => {
     setContacts(updatedContacts);
   };
 
   const handleSessionUpdate = async (updates: Partial<WhatsAppSession>) => {
     try {
-      const updatedSession = await updateSession(updates);
+      const updatedSession = { ...session, ...updates };
+      await updateSession(updatedSession);
       setSession(updatedSession);
     } catch (error) {
       console.error('Failed to update session:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update session',
-        variant: 'error',
-      });
     }
   };
 
   const handleSettingsUpdate = async (updates: Partial<SettingsType>) => {
     try {
-      const updatedSettings = await updateSettings(updates);
+      const updatedSettings = { ...settings, ...updates };
+      await updateSettings(updatedSettings);
       setSettings(updatedSettings);
     } catch (error) {
       console.error('Failed to update settings:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update settings',
-        variant: 'error',
-      });
     }
   };
 
@@ -128,25 +104,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     switch (activePage) {
       case "dashboard":
-        return <Dashboard onNotification={handleNotification} contacts={contacts} session={session} notifications={notifications} />
+        return <Dashboard contacts={contacts} session={session} />
       case "contacts":
-        return <ContactList contacts={contacts} onContactsUpdate={handleContactsUpdate} onNotification={handleNotification} />
+        return <ContactList contacts={contacts} onContactsUpdate={handleContactsUpdate} />
       case "integration":
-        return <WhatsAppIntegration session={session} onSessionUpdate={handleSessionUpdate} onNotification={handleNotification} />
+        return <WhatsAppIntegration session={session} onSessionUpdate={handleSessionUpdate} />
       case "bulk-sender":
-        return <BulkSender contacts={contacts} session={session} onNotification={handleNotification} />
+        return <BulkSender contacts={contacts} session={session} />
       case "templates":
-        return <MessageTemplates onNotification={handleNotification} />
+        return <MessageTemplates />
       case "campaigns":
-        return <CampaignManager onNotification={handleNotification} />
+        return <CampaignManager />
       case "analytics":
-        return <Analytics onNotification={handleNotification} campaigns={[]} messages={[]} />
+        return <Analytics campaigns={[]} messages={[]} />
       case "automation":
-        return <AutomationRules onNotification={handleNotification} />
+        return <AutomationRules />
       case "settings":
-        return <Settings onNotification={handleNotification} settings={settings} onSettingsUpdate={handleSettingsUpdate} />
+        return <Settings settings={settings} onSettingsUpdate={handleSettingsUpdate} />
       default:
-        return <Dashboard onNotification={handleNotification} contacts={contacts} session={session} notifications={notifications} />
+        return <Dashboard contacts={contacts} session={session} />
     }
   }
 
@@ -156,10 +132,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <main className="flex-1 overflow-y-auto p-8">
         {renderPage()}
       </main>
-      <div className="fixed top-4 right-4 z-50">
-        <Notifications />
-      </div>
-      <Toaster />
     </div>
   )
 } 
