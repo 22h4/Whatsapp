@@ -40,21 +40,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     crashReporting: true,
   })
   const [isClient, setIsClient] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
-      const [loadedContacts, loadedSession, loadedNotifications, loadedSettings] = await Promise.all([
-        getContacts(),
-        getSession(),
-        getNotifications(),
-        getSettings()
-      ]);
-      
-      setContacts(loadedContacts);
-      setSession(loadedSession);
-      setNotifications(loadedNotifications);
-      setSettings(loadedSettings);
-      setIsClient(true);
+      try {
+        setIsLoading(true);
+        const [loadedContacts, loadedSession, loadedNotifications, loadedSettings] = await Promise.all([
+          getContacts(),
+          getSession(),
+          getNotifications(),
+          getSettings()
+        ]);
+        
+        setContacts(loadedContacts);
+        setSession(loadedSession);
+        setNotifications(loadedNotifications);
+        setSettings(loadedSettings);
+        setIsClient(true);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();
@@ -62,32 +70,60 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const { toast } = useToast();
 
-  const handleNotification = (notification: any) => {
-    setNotifications((prev: Notification[]) => [...prev, notification]);
-    toast({
-      title: notification.title,
-      description: notification.message,
-      variant: notification.type,
-    });
+  const handleNotification = async (notification: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
+    try {
+      const newNotification = await addNotification(notification);
+      setNotifications(prev => [newNotification, ...prev]);
+      toast({
+        title: notification.title,
+        description: notification.message,
+        variant: notification.type,
+      });
+    } catch (error) {
+      console.error('Failed to add notification:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add notification',
+        variant: 'error',
+      });
+    }
   };
 
   const handleContactsUpdate = (updatedContacts: Contact[]) => {
-    setContacts((prev: Contact[]) => updatedContacts);
+    setContacts(updatedContacts);
   };
 
   const handleSessionUpdate = async (updates: Partial<WhatsAppSession>) => {
-    const updatedSession = await updateSession(updates);
-    setSession(updatedSession);
+    try {
+      const updatedSession = await updateSession(updates);
+      setSession(updatedSession);
+    } catch (error) {
+      console.error('Failed to update session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update session',
+        variant: 'error',
+      });
+    }
   };
 
   const handleSettingsUpdate = async (updates: Partial<SettingsType>) => {
-    const updatedSettings = await updateSettings(updates);
-    setSettings(updatedSettings);
+    try {
+      const updatedSettings = await updateSettings(updates);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update settings',
+        variant: 'error',
+      });
+    }
   };
 
   const renderPage = () => {
-    if (!isClient) {
-      return null
+    if (!isClient || isLoading) {
+      return <div className="flex items-center justify-center h-full">Loading...</div>;
     }
 
     switch (activePage) {
