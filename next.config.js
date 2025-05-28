@@ -1,11 +1,12 @@
 const path = require('path')
+const webpack = require('webpack')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { isServer }) => {
     // Set environment variable to prevent coverage version loading
     config.plugins.push(
-      new config.webpack.DefinePlugin({
+      new webpack.DefinePlugin({
         'process.env.FLUENTFFMPEG_COV': JSON.stringify(false)
       })
     )
@@ -27,10 +28,13 @@ const nextConfig = {
 
     return config
   },
-  // Enable experimental features needed for WhatsApp Web.js
-  experimental: {
-    serverComponentsExternalPackages: ['whatsapp-web.js', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg']
-  }
+  // Optimize for Vercel deployment
+  output: 'standalone',
+  poweredByHeader: false,
+  reactStrictMode: true,
+  swcMinify: true,
+  // External packages that should be treated as server components
+  serverExternalPackages: ['whatsapp-web.js', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg']
 }
 
 module.exports = nextConfig 

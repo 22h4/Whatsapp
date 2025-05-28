@@ -1,3 +1,217 @@
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+
+interface WhatsAppDBSchema extends DBSchema {
+  contacts: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      phone: string;
+      email?: string;
+      company?: string;
+      title?: string;
+      notes?: string;
+      source?: string;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    indexes: { 'by-phone': string };
+  };
+  groups: {
+    key: string;
+    value: {
+      id: string;
+      name: string;
+      description?: string;
+      contactIds: string[];
+      createdAt: Date;
+      updatedAt: Date;
+    };
+  };
+  messages: {
+    key: string;
+    value: {
+      id: string;
+      content: string;
+      scheduledAt: Date;
+      status: 'pending' | 'sent' | 'failed';
+      contactId: string;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    indexes: { 'by-scheduled': Date };
+  };
+  settings: {
+    key: string;
+    value: {
+      theme: 'light' | 'dark' | 'system';
+      language: string;
+      timezone: string;
+      emailNotifications: boolean;
+      pushNotifications: boolean;
+      soundEnabled: boolean;
+      defaultDelay: number;
+      maxRetries: number;
+      autoBackup: boolean;
+      dataRetention: number;
+      analyticsEnabled: boolean;
+      crashReporting: boolean;
+    };
+  };
+}
+
+let db: IDBPDatabase<WhatsAppDBSchema> | null = null;
+
+export async function initDB() {
+  if (db) return db;
+
+  db = await openDB<WhatsAppDBSchema>('whatsapp-automation', 1, {
+    upgrade(database) {
+      // Create contacts store
+      const contactsStore = database.createObjectStore('contacts', { keyPath: 'id' });
+      contactsStore.createIndex('by-phone', 'phone', { unique: true });
+
+      // Create groups store
+      database.createObjectStore('groups', { keyPath: 'id' });
+
+      // Create messages store
+      const messagesStore = database.createObjectStore('messages', { keyPath: 'id' });
+      messagesStore.createIndex('by-scheduled', 'scheduledAt');
+
+      // Create settings store
+      database.createObjectStore('settings', { keyPath: 'id' });
+    },
+  });
+
+  return db;
+}
+
+// Contacts
+export async function getContacts() {
+  const database = await initDB();
+  return database.getAll('contacts');
+}
+
+export async function getContact(id: string) {
+  const database = await initDB();
+  return database.get('contacts', id);
+}
+
+export async function createContact(data: Omit<WhatsAppDBSchema['contacts']['value'], 'id' | 'createdAt' | 'updatedAt'>) {
+  const database = await initDB();
+  const id = crypto.randomUUID();
+  const now = new Date();
+  return database.add('contacts', {
+    ...data,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateContact(id: string, data: Partial<WhatsAppDBSchema['contacts']['value']>) {
+  const database = await initDB();
+  const contact = await database.get('contacts', id);
+  if (!contact) throw new Error('Contact not found');
+  
+  return database.put('contacts', {
+    ...contact,
+    ...data,
+    updatedAt: new Date(),
+  });
+}
+
+export async function deleteContact(id: string) {
+  const database = await initDB();
+  return database.delete('contacts', id);
+}
+
+// Groups
+export async function getGroups() {
+  const database = await initDB();
+  return database.getAll('groups');
+}
+
+export async function createGroup(data: Omit<WhatsAppDBSchema['groups']['value'], 'id' | 'createdAt' | 'updatedAt'>) {
+  const database = await initDB();
+  const id = crypto.randomUUID();
+  const now = new Date();
+  return database.add('groups', {
+    ...data,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateGroup(id: string, data: Partial<WhatsAppDBSchema['groups']['value']>) {
+  const database = await initDB();
+  const group = await database.get('groups', id);
+  if (!group) throw new Error('Group not found');
+  
+  return database.put('groups', {
+    ...group,
+    ...data,
+    updatedAt: new Date(),
+  });
+}
+
+export async function deleteGroup(id: string) {
+  const database = await initDB();
+  return database.delete('groups', id);
+}
+
+// Messages
+export async function getMessages() {
+  const database = await initDB();
+  return database.getAll('messages');
+}
+
+export async function createMessage(data: Omit<WhatsAppDBSchema['messages']['value'], 'id' | 'createdAt' | 'updatedAt'>) {
+  const database = await initDB();
+  const id = crypto.randomUUID();
+  const now = new Date();
+  return database.add('messages', {
+    ...data,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export async function updateMessage(id: string, data: Partial<WhatsAppDBSchema['messages']['value']>) {
+  const database = await initDB();
+  const message = await database.get('messages', id);
+  if (!message) throw new Error('Message not found');
+  
+  return database.put('messages', {
+    ...message,
+    ...data,
+    updatedAt: new Date(),
+  });
+}
+
+export async function deleteMessage(id: string) {
+  const database = await initDB();
+  return database.delete('messages', id);
+}
+
+// Settings
+export async function getSettings() {
+  const database = await initDB();
+  return database.get('settings', 'default');
+}
+
+export async function updateSettings(data: Partial<WhatsAppDBSchema['settings']['value']>) {
+  const database = await initDB();
+  const settings = await database.get('settings', 'default');
+  
+  return database.put('settings', {
+    ...settings,
+    ...data,
+  }, 'default');
+}
+
 export interface Contact {
   id: string;
   name: string;
