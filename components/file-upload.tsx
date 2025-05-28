@@ -8,13 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-
-interface Contact {
-  id: string
-  name: string
-  phone: string
-  [key: string]: string
-}
+import type { Contact } from "@/lib/storage"
 
 interface FileUploadProps {
   onContactsUpdate: (contacts: Contact[]) => void
@@ -44,22 +38,29 @@ export default function FileUpload({ onContactsUpdate }: FileUploadProps) {
 
     const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""))
     const contacts: Contact[] = []
+    const now = new Date().toISOString()
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""))
       if (values.length !== headers.length) continue
 
       const contact: Contact = {
-        id: `contact_${i}`,
+        id: `contact_${Date.now()}_${i}`,
         name: "",
         phone: "",
+        createdAt: now,
+        updatedAt: now,
       }
 
       headers.forEach((header, index) => {
         const key = header.toLowerCase()
         if (key.includes("name")) contact.name = values[index]
         else if (key.includes("phone") || key.includes("number")) contact.phone = values[index]
-        else contact[header] = values[index]
+        else if (key.includes("email")) contact.email = values[index]
+        else if (key.includes("company")) contact.company = values[index]
+        else if (key.includes("title")) contact.title = values[index]
+        else if (key.includes("notes")) contact.notes = values[index]
+        else if (key.includes("source")) contact.source = values[index]
       })
 
       if (contact.phone) contacts.push(contact)

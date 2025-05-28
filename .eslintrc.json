@@ -1,10 +1,7 @@
 {
-  "extends": "next/core-web-vitals",
+  "extends": ["next/core-web-vitals"],
   "rules": {
     "react/no-unescaped-entities": "off",
     "@next/next/no-img-element": "off"
-  },
-  "parserOptions": {
-    "project": "./tsconfig.json"
   }
 } 
